@@ -1,0 +1,6 @@
+node_modules/
+.env
+terminals/
+images/posts/*
+!images/posts/.gitkeep
+_cursor-local-assistant/

@@ -1,0 +1,8 @@
+{
+  "id": 3,
+  "title": "示例文章：Markdown 风格测试",
+  "date": "2026-05-02",
+  "excerpt": "测试一下代码块和格式。",
+  "content": "<p>博客支持基本的 HTML 格式，包括：</p><ul style=\"margin-bottom:1rem;padding-left:1.5rem;\"><li>无序列表</li><li>有序列表</li><li><strong>粗体</strong>和<em>斜体</em></li></ul><p>代码块也可以：</p><pre><code>console.log(\"Hello, Blog!\");</code></pre><p>以及行内代码 <code>inline code</code> 的展示。</p><img src=\"/images/posts/3/mihoyo.webp\" alt=\"\">",
+  "images": []
+}

@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>博客管理</title>
+<style>
+  :root { --text:#fff; --muted:rgba(255,255,255,0.6); --accent:#60a5fa; --border:rgba(255,255,255,0.12); --glass:rgba(255,255,255,0.06); --red:#ef4444; --green:#22c55e; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif; background:#0d0d0d; color:var(--text); line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem; }
+  h1 { font-size:1.5rem; margin-bottom:1.5rem; }
+  h2 { font-size:1.15rem; margin-bottom:0.75rem; }
+  input,textarea,select { font-family:inherit; font-size:0.95rem; padding:0.5rem 0.75rem; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.14); color:var(--text); width:100%; }
+  input[type="date"] { color-scheme:dark; background:rgba(255,255,255,0.18); }
+  select { background:rgba(255,255,255,0.18); cursor:pointer; }
+  select option { background:#1a1a2e; color:#fff; }
+  textarea { min-height:200px; resize:vertical; line-height:1.6; }
+  label { display:block; font-size:0.85rem; color:var(--muted); margin-bottom:0.25rem; margin-top:1rem; }
+  button { cursor:pointer; width:auto; font-weight:600; transition:opacity 0.15s; font-family:inherit; font-size:0.95rem; padding:0.5rem 0.75rem; border-radius:8px; }
+  button:hover { opacity:0.8; }
+  .btn-primary { background:rgba(255,255,255,0.15); color:#fff; border:1px solid var(--border); }
+  .btn-danger { background:rgba(239,68,68,0.25); color:#fff; border:1px solid rgba(239,68,68,0.35); }
+  .btn-ghost { background:none; color:var(--muted); border:none; padding:0.25rem 0.5rem; font-size:0.85rem; }
+  .btn-ghost:hover { color:var(--text); }
+  .card { background:var(--glass); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:16px; padding:1.25rem; margin-bottom:1rem; }
+  .post-row { display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid var(--border); }
+  .post-row:last-child { border-bottom:none; }
+  .post-row .info { flex:1; }
+  .post-row .title { font-weight:600; cursor:pointer; }
+  .post-row .title:hover { opacity:0.7; }
+  .post-row .meta { font-size:0.8rem; color:var(--muted); }
+  .post-row .actions { display:flex; gap:0.5rem; }
+  .hidden { display:none !important; }
+  .error { color:var(--red); font-size:0.85rem; margin-top:0.5rem; }
+  .success { color:var(--green); font-size:0.85rem; margin-top:0.5rem; }
+  .form-group { margin-bottom:0.75rem; }
+  .form-actions { display:flex; gap:0.5rem; margin-top:1rem; }
+  .divider { border-top:1px solid var(--border); margin:1.5rem 0; }
+  .tabs { display:flex; gap:1.5rem; margin-bottom:1.5rem; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .tabs button { background:none; border:none; color:var(--muted); font-size:0.95rem; cursor:pointer; padding:0.5rem 0; border-bottom:2px solid transparent; border-radius:0; font-weight:500; }
+  .tabs button.active { color:var(--text); border-bottom-color:var(--accent); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+  .link-row { display:flex; gap:0.5rem; margin-bottom:0.5rem; align-items:center; }
+  .link-row input { flex:1; }
+  .btn-sm { padding:0.25rem 0.5rem; font-size:0.8rem; }
+  .app-header { display:flex; justify-content:flex-end; align-items:center; padding:0 0 1rem 0; gap:0.75rem; font-size:0.9rem; color:var(--muted); }
+  .app-header .username { color:var(--accent); font-weight:600; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:100; }
+  .modal-box { background:#1a1a2e; border:1px solid var(--border); border-radius:12px; padding:1.5rem; max-width:360px; width:90%; text-align:center; }
+  .modal-box p { margin-bottom:1.25rem; color:var(--text); }
+  .modal-box .modal-actions { display:flex; gap:0.75rem; justify-content:center; }
+  .btn-cancel { background:rgba(255,255,255,0.1); color:var(--muted); border:1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div id="login-gate" style="max-width:400px;margin:4rem auto 0">
+  <div class="card">
+    <h2>博客管理 - 登录</h2>
+    <div class="form-group"><label>账户</label><input type="text" id="lg-user" placeholder="管理员账户" onkeydown="if(event.key=='Enter')document.getElementById('lg-pass').focus()"></div>
+    <div class="form-group"><label>密码</label><input type="password" id="lg-pass" placeholder="请输入密码" onkeydown="if(event.key=='Enter')doLogin()"></div>
+    <div id="lg-error" class="error hidden"></div>
+    <div style="margin-top:1rem"><button class="btn-primary" onclick="doLogin()">登录</button></div>
+    <div style="margin-top:0.75rem;display:flex;justify-content:space-between;align-items:center">
+      <a href="/" style="color:var(--muted);font-size:0.85rem;text-decoration:none">← 返回博客</a>
+      <a href="javascript:showForgot()" style="color:var(--accent);font-size:0.85rem;text-decoration:none">忘记密码</a>
+    </div>
+  </div>
+</div>
+
+<div id="forgot-password" class="hidden" style="max-width:400px;margin:4rem auto 0">
+  <div class="card">
+    <h2>重置密码</h2>
+    <div class="form-group"><label>账户</label><input type="text" id="fg-user" placeholder="管理员账户"></div>
+    <div class="form-group"><label>新密码</label><input type="password" id="fg-new-pw" placeholder="新密码（8-32位，含大小写字母和数字）"></div>
+    <div class="form-group"><input type="password" id="fg-new-pw2" placeholder="确认新密码"></div>
+    <div id="fg-code-section">
+      <div class="form-group"><input type="text" id="fg-code" placeholder="邮箱验证码（6位）" maxlength="6"></div>
+      <div style="margin-bottom:0.75rem"><button class="btn-primary btn-sm" id="fg-send-btn" onclick="sendResetCode()">发送验证码到邮箱</button></div>
+    </div>
+    <div id="fg-error" class="error hidden"></div>
+    <div id="fg-msg" class="success hidden"></div>
+    <div style="margin-top:1rem"><button class="btn-primary" onclick="doResetPassword()">重置密码</button></div>
+    <div style="margin-top:0.75rem"><a href="javascript:showLogin()" style="color:var(--muted);font-size:0.85rem;text-decoration:none">← 返回登录</a></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="app-header">
+    <span>欢迎，<span class="username" id="header-username">admin</span></span>
+    <button class="btn-ghost" onclick="showLogoutConfirm()">退出登录</button>
+  </div>
+  <div class="tabs">
+    <button class="active" onclick="switchTab('posts')">文章管理</button>
+    <button onclick="switchTab('profile')">个人信息</button>
+    <button onclick="switchTab('settings')">站点设置</button>
+    <button onclick="switchTab('timeline')">时间轴管理</button>
+    <button onclick="switchTab('account')">账户安全</button>
+  </div>
+
+  <div id="tab-posts" class="tab-panel active">
+    <div id="post-list-container" class="card"></div>
+    <div style="margin-top:1rem"><button class="btn-primary" onclick="showEditor()">+ 新建文章</button></div>
+  </div>
+
+  <div id="tab-profile" class="tab-panel">
+    <div class="card">
+      <div class="form-group"><label>头像 URL</label><input type="text" id="pf-avatar" placeholder="https://example.com/avatar.jpg"><p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">请使用直接图片链接（以 .jpg/.png/.webp 结尾），而非网页地址。</p></div>
+      <div class="form-group"><label>姓名</label><input type="text" id="pf-name" placeholder="你的名字或昵称"></div>
+      <div class="form-group"><label>简介</label><input type="text" id="pf-bio" placeholder="一句话介绍自己"></div>
+      <div class="form-group"><label>个性标签</label><div id="pf-tags"></div><button class="btn-primary btn-sm" onclick="addPfTag()" style="margin-top:0.5rem">+ 添加标签</button></div>
+      <div style="margin-top:1rem"><button class="btn-primary" onclick="saveProfile()">保存信息</button></div>
+      <div id="pf-msg" class="success hidden">个人信息已保存</div>
+    </div>
+  </div>
+
+  <div id="tab-settings" class="tab-panel">
+    <div class="card">
+      <div class="form-group"><label>博客标题</label><input type="text" id="cfg-title"></div>
+      <div class="form-group"><label>副标题</label><input type="text" id="cfg-subtitle"></div>
+      <div class="form-group"><label>页脚文字</label><input type="text" id="cfg-footer"></div>
+      <div class="form-group"><label>社交链接</label><div id="cfg-links"></div><button class="btn-primary btn-sm" onclick="addLink()" style="margin-top:0.5rem">+ 添加链接</button></div>
+      <div class="form-group"><label>背景类型</label><select id="cfg-bg-type" style="width:auto"><option value="">无</option><option value="image">图片</option><option value="video">视频</option></select></div>
+      <div class="form-group"><label>背景 URL</label><input type="text" id="cfg-bg-url" placeholder="https://... 留空使用默认渐变"></div>
+      <div style="margin-top:1rem"><button class="btn-primary" onclick="saveConfig()">保存设置</button></div>
+      <div id="cfg-msg" class="success hidden">设置已保存</div>
+    </div>
+  </div>
+
+  <div id="tab-timeline" class="tab-panel">
+    <div id="timeline-list-container" class="card"></div>
+    <div style="margin-top:1rem"><button class="btn-primary" onclick="showTimelineEditor()">+ 新建事件</button></div>
+  </div>
+
+  <div id="tab-account" class="tab-panel">
+    <div class="card">
+      <div id="account-email-status" style="margin-bottom:1rem;font-size:0.9rem;color:var(--muted)">加载中...</div>
+
+      <div class="form-group"><label>修改用户名</label></div>
+      <div class="form-group"><input type="text" id="acc-username" placeholder="新用户名"></div>
+      <button class="btn-primary" onclick="changeUsername()">修改用户名</button>
+      <div id="acc-user-msg" class="success hidden"></div>
+
+      <div class="divider" style="margin:0.75rem 0"></div>
+      <div class="form-group"><label>修改密码</label></div>
+      <div class="form-group"><input type="password" id="acc-old-pw" placeholder="旧密码"></div>
+      <div class="form-group"><input type="password" id="acc-new-pw" placeholder="新密码（8-32位，含大小写字母和数字）"></div>
+      <div class="form-group"><input type="password" id="acc-new-pw2" placeholder="确认新密码"></div>
+      <div id="acc-pw-code-section" class="hidden">
+        <div class="form-group"><input type="text" id="acc-pw-code" placeholder="邮箱验证码（6位）" maxlength="6"></div>
+        <div style="margin-bottom:0.75rem"><button class="btn-primary btn-sm" id="acc-pw-send-btn" onclick="sendPwCode()">发送验证码到邮箱</button></div>
+      </div>
+      <button class="btn-primary" onclick="changePassword()">修改密码</button>
+      <div id="acc-pw-msg" class="success hidden"></div>
+
+      <div class="divider" style="margin:1.5rem 0"></div>
+      <div class="form-group"><label>邮箱</label></div>
+      <div class="form-group"><input type="email" id="acc-email" placeholder="your@email.com"></div>
+      <div id="acc-email-code-section" class="hidden">
+        <div class="form-group"><input type="text" id="acc-email-code" placeholder="验证码（6位）" maxlength="6"></div>
+        <div style="margin-bottom:0.75rem"><button class="btn-primary btn-sm" id="acc-email-send-btn" onclick="sendEmailCode()">发送验证码</button></div>
+      </div>
+      <div id="acc-email-hint" style="font-size:0.8rem;color:var(--red);margin-bottom:0.5rem" class="hidden"></div>
+      <button class="btn-primary" id="acc-email-action-btn" onclick="emailAction()">绑定邮箱</button>
+      <div id="acc-email-msg" class="success hidden"></div>
+    </div>
+  </div>
+
+  <div id="editor" class="hidden">
+    <div class="divider"></div>
+    <h2 id="editor-title">新建文章</h2>
+    <div class="form-group"><label>标题</label><input type="text" id="edit-title" placeholder="文章标题"></div>
+    <div class="form-group"><label>日期</label><input type="date" id="edit-date"></div>
+    <div class="form-group"><label>摘要</label><input type="text" id="edit-excerpt" placeholder="简短摘要（可选）"></div>
+    <div class="form-group"><label>内容（HTML）</label><textarea id="edit-content" placeholder="&lt;p&gt;文章正文...&lt;/p&gt;"></textarea><div style="display:flex;gap:0.5rem;margin-top:0.25rem"><button class="btn-ghost btn-sm" onclick="insertImage()">插入图片 URL</button><button class="btn-ghost btn-sm" onclick="document.getElementById('img-file-input').click()">上传图片</button><input type="file" id="img-file-input" accept="image/*" style="display:none" onchange="uploadAndInsert()"></div></div>
+    <div class="form-group"><label>文章配图</label><div id="edit-images"></div><div style="display:flex;gap:0.5rem;margin-top:0.5rem"><button class="btn-primary btn-sm" onclick="addImage()">+ 添加图片 URL</button><button class="btn-primary btn-sm" onclick="document.getElementById('img-gallery-input').click()">上传配图</button><input type="file" id="img-gallery-input" accept="image/*" style="display:none" onchange="uploadGalleryImage()"></div><p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">建议使用 16:9 比例图片。多张图片将自动轮播展示。</p></div>
+    <div class="form-actions"><button class="btn-primary" id="save-btn" onclick="savePost()">保存</button><button class="btn-ghost" onclick="hideEditor()">取消</button></div>
+    <div id="edit-error" class="error hidden"></div>
+    <div id="edit-success" class="success hidden"></div>
+  </div>
+
+  <div id="timeline-editor" class="hidden">
+    <div class="divider"></div>
+    <h2 id="tl-editor-title">新建事件</h2>
+    <div class="form-group"><label>日期</label><input type="date" id="tl-date"></div>
+    <div class="form-group"><label>标题</label><input type="text" id="tl-title" placeholder="事件标题"></div>
+    <div class="form-group"><label>描述</label><input type="text" id="tl-desc" placeholder="简短描述（可选）"></div>
+    <div class="form-group"><label>图标</label><select id="tl-icon" style="width:auto"><option value="">无</option><option value="code">code</option><option value="book">book</option><option value="star">star</option><option value="work">work</option><option value="education">education</option><option value="heart">heart</option><option value="award">award</option><option value="coffee">coffee</option></select></div>
+    <div class="form-actions"><button class="btn-primary" id="tl-save-btn" onclick="saveTimelineEvent()">保存</button><button class="btn-ghost" onclick="hideTimelineEditor()">取消</button></div>
+    <div id="tl-error" class="error hidden"></div>
+    <div id="tl-success" class="success hidden"></div>
+  </div>
+
+  <div id="logout-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <p>确认退出登录？</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="cancelLogout()">取消</button>
+        <button class="btn-danger" onclick="doLogout()">确认</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Login gate
+const API='/api/posts'; const TAPI='/api/timeline';
+let token=''; let editingId=null; let tlEditingId=null; let currentUser='';
+
+function getHeaders(){ return {'Authorization':'Bearer '+token,'Content-Type':'application/json'}; }
+
+function showLogin(msg){
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('forgot-password').classList.add('hidden');
+  document.getElementById('login-gate').classList.remove('hidden');
+  if(msg) document.getElementById('lg-error').textContent=msg;
+  document.getElementById('lg-error').classList.toggle('hidden',!msg);
+  document.getElementById('lg-user').focus();
+}
+
+function showApp(){
+  document.getElementById('login-gate').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('header-username').textContent=currentUser;
+  loadPosts();
+}
+
+async function tryAutoLogin(){
+  const saved=localStorage.getItem('blog_token');
+  if(!saved){ showLogin(); return; }
+  token=saved;
+  try{
+    const res=await fetch('/api/auth/me',{headers:getHeaders()});
+    if(res.ok){ showApp(); return; }
+  }catch(e){}
+  // Token invalid
+  localStorage.removeItem('blog_token');
+  token='';
+  showLogin('登录已过期，请重新登录');
+}
+
+async function doLogin(){
+  const u=document.getElementById('lg-user').value.trim();
+  const p=document.getElementById('lg-pass').value;
+  if(!u||!p){ showLogin('请输入账户和密码'); return; }
+  try{
+    const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    if(res.ok){
+      const d=await res.json();
+      token=d.token;
+      currentUser=d.username;
+      localStorage.setItem('blog_token',token);
+      showApp();
+    }else{
+      const d=await res.json().catch(()=>({}));
+      showLogin(d.error||'账户或密码错误');
+    }
+  }catch(e){ showLogin('无法连接服务器'); console.error(e); }
+}
+
+function showLogoutConfirm(){
+  document.getElementById('logout-modal').classList.remove('hidden');
+}
+
+function cancelLogout(){
+  document.getElementById('logout-modal').classList.add('hidden');
+}
+
+async function doLogout(){
+  document.getElementById('logout-modal').classList.add('hidden');
+  localStorage.removeItem('blog_token');
+  token='';
+  currentUser='';
+  try{ await fetch('/api/auth/logout',{method:'POST',headers:getHeaders()}); }catch(e){}
+  showLogin();
+}
+
+tryAutoLogin();
+
+// Posts
+async function loadPosts(){
+  const res=await fetch(API); const posts=await res.json(); const c=document.getElementById('post-list-container');
+  if(!posts.length){ c.innerHTML='<p style="color:var(--muted)">还没有文章。</p>'; return; }
+  c.innerHTML=posts.map(p=>`<div class="post-row"><div class="info"><div class="title" onclick="editPost(${p.id})">${esc(p.title)}</div><div class="meta">${p.date}</div></div><div class="actions"><button class="btn-ghost" onclick="editPost(${p.id})">编辑</button><button class="btn-ghost btn-danger" onclick="deletePost(${p.id})">删除</button></div></div>`).join('');
+}
+
+function showEditor(){
+  editingId=null; document.getElementById('editor-title').textContent='新建文章';
+  document.getElementById('edit-title').value=''; document.getElementById('edit-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('edit-excerpt').value=''; document.getElementById('edit-content').value='';
+  editImages=[]; renderEditImages(); document.getElementById('edit-error').classList.add('hidden');
+  document.getElementById('edit-success').classList.add('hidden'); document.getElementById('save-btn').textContent='保存';
+  document.getElementById('editor').classList.remove('hidden'); document.getElementById('edit-title').focus();
+}
+function hideEditor(){ document.getElementById('editor').classList.add('hidden'); }
+
+async function editPost(id){
+  const res=await fetch(API); const posts=await res.json(); const post=posts.find(p=>p.id===id);
+  if(!post) return; editingId=id; document.getElementById('editor-title').textContent='编辑文章';
+  document.getElementById('edit-title').value=post.title; document.getElementById('edit-date').value=post.date;
+  document.getElementById('edit-excerpt').value=post.excerpt||''; document.getElementById('edit-content').value=post.content;
+  editImages=post.images||[]; renderEditImages(); document.getElementById('edit-error').classList.add('hidden');
+  document.getElementById('edit-success').classList.add('hidden'); document.getElementById('save-btn').textContent='更新';
+  document.getElementById('editor').classList.remove('hidden'); document.getElementById('edit-title').focus();
+}
+
+async function savePost(){
+  const title=document.getElementById('edit-title').value.trim(); const date=document.getElementById('edit-date').value;
+  const excerpt=document.getElementById('edit-excerpt').value.trim(); const content=document.getElementById('edit-content').value.trim();
+  if(!title||!date||!content){ document.getElementById('edit-error').textContent='标题、日期和内容为必填项'; document.getElementById('edit-error').classList.remove('hidden'); return; }
+  const url=editingId?`${API}/${editingId}`:API; const method=editingId?'PUT':'POST';
+  try{
+    const res=await fetch(url,{method,headers:getHeaders(),body:JSON.stringify({title,date,excerpt,content,images:editImages.filter(u=>u.trim())})});
+    if(res.ok){ document.getElementById('edit-success').textContent=editingId?'文章已更新':'文章已创建'; document.getElementById('edit-success').classList.remove('hidden'); document.getElementById('edit-error').classList.add('hidden'); if(!editingId)hideEditor(); loadPosts(); }
+    else{ const d=await res.json(); document.getElementById('edit-error').textContent=d.error||'保存失败'; document.getElementById('edit-error').classList.remove('hidden'); }
+  }catch(e){console.error('Save post error:',e);document.getElementById('edit-error').textContent='网络错误';document.getElementById('edit-error').classList.remove('hidden');}
+}
+
+async function deletePost(id){ if(!confirm('确认删除这篇文章？'))return; try{ await fetch(`${API}/${id}`,{method:'DELETE',headers:getHeaders()}); loadPosts(); if(editingId===id)hideEditor(); }catch(e){console.error(e)} }
+
+function switchTab(name){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  const btns=document.querySelectorAll('.tabs button'); const map={posts:0,profile:1,settings:2,timeline:3,account:4};
+  if(map[name]!==undefined)btns[map[name]].classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active')); document.getElementById('tab-'+name).classList.add('active');
+  if(name==='settings')loadSiteConfig(); if(name==='profile')loadProfileConfig(); if(name==='timeline')loadTimeline(); if(name==='account')loadAccountInfo();
+}
+
+// Profile
+let pfTags=[];
+function renderPfTags(tags){ pfTags=tags||[]; document.getElementById('pf-tags').innerHTML=pfTags.map((t,i)=>`<div class="link-row"><input type="text" value="${t}" placeholder="标签" onchange="pfTags[${i}]=this.value"><button class="btn-danger btn-sm" onclick="pfTags.splice(${i},1);renderPfTags(pfTags)">删除</button></div>`).join(''); }
+function addPfTag(){ pfTags.push(''); renderPfTags(pfTags); }
+async function loadProfileConfig(){
+  try{
+    const res=await fetch('/api/config'); const cfg=await res.json(); const p=cfg.profile||{};
+    document.getElementById('pf-avatar').value=p.avatar||''; document.getElementById('pf-name').value=p.name||'';
+    document.getElementById('pf-bio').value=p.bio||''; renderPfTags(p.tags||[]);
+  }catch(e){console.error(e)}
+}
+async function saveProfile(){
+  try{
+    const res=await fetch('/api/config'); const cfg=await res.json();
+    cfg.profile={ avatar:document.getElementById('pf-avatar').value.trim(), name:document.getElementById('pf-name').value.trim(), bio:document.getElementById('pf-bio').value.trim(), tags:pfTags.filter(t=>t.trim()) };
+    const ur=await fetch('/api/config',{method:'PUT',headers:getHeaders(),body:JSON.stringify(cfg)});
+    if(ur.ok)document.getElementById('pf-msg').classList.remove('hidden');
+  }catch(e){console.error(e)}
+}
+
+// Settings
+let cfgLinks=[];
+function renderCfgLinks(links){ cfgLinks=links; document.getElementById('cfg-links').innerHTML=links.map((l,i)=>`<div class="link-row"><input type="text" value="${l.label}" placeholder="名称" onchange="cfgLinks[${i}].label=this.value"><input type="text" value="${l.url}" placeholder="URL" onchange="cfgLinks[${i}].url=this.value"><button class="btn-danger btn-sm" onclick="cfgLinks.splice(${i},1);renderCfgLinks(cfgLinks)">删除</button></div>`).join(''); }
+function addLink(){ cfgLinks.push({label:'',url:''}); renderCfgLinks(cfgLinks); }
+async function loadSiteConfig(){
+  try{
+    const res=await fetch('/api/config'); const cfg=await res.json();
+    document.getElementById('cfg-title').value=cfg.title; document.getElementById('cfg-subtitle').value=cfg.subtitle;
+    document.getElementById('cfg-footer').value=cfg.footer; renderCfgLinks(cfg.links||[]);
+    document.getElementById('cfg-bg-type').value=(cfg.background&&cfg.background.type)||'';
+    document.getElementById('cfg-bg-url').value=(cfg.background&&cfg.background.url)||'';
+  }catch(e){console.error(e)}
+}
+async function saveConfig(){
+  const body={ title:document.getElementById('cfg-title').value.trim(), subtitle:document.getElementById('cfg-subtitle').value.trim(), footer:document.getElementById('cfg-footer').value.trim(), links:cfgLinks.filter(l=>l.label&&l.url), background:{ type:document.getElementById('cfg-bg-type').value, url:document.getElementById('cfg-bg-url').value.trim() } };
+  try{ const res=await fetch('/api/config',{method:'PUT',headers:getHeaders(),body:JSON.stringify(body)}); if(res.ok)document.getElementById('cfg-msg').classList.remove('hidden'); }catch(e){console.error(e)}
+}
+
+// Timeline
+async function loadTimeline(){
+  try{
+    const res=await fetch(TAPI); const evts=await res.json(); const c=document.getElementById('timeline-list-container');
+    if(!evts.length){ c.innerHTML='<p style="color:var(--muted)">还没有事件。</p>'; return; }
+    c.innerHTML=evts.map(e=>`<div class="post-row"><div class="info"><div class="title">${e.icon?'['+e.icon+'] ':''}${esc(e.title)}</div><div class="meta">${e.date}</div></div><div class="actions"><button class="btn-ghost" onclick="showTimelineEditor(${e.id})">编辑</button><button class="btn-ghost btn-danger" onclick="deleteTimelineEvent(${e.id})">删除</button></div></div>`).join('');
+  }catch(e){console.error('Timeline load error:',e)}
+}
+function showTimelineEditor(id){
+  tlEditingId=id||null; document.getElementById('tl-editor-title').textContent=id?'编辑事件':'新建事件';
+  if(id){ loadTimelineForEdit(id); }else{ document.getElementById('tl-date').value=''; document.getElementById('tl-title').value=''; document.getElementById('tl-desc').value=''; document.getElementById('tl-icon').value=''; }
+  document.getElementById('tl-error').classList.add('hidden'); document.getElementById('tl-success').classList.add('hidden');
+  document.getElementById('tl-save-btn').textContent=id?'更新':'保存'; document.getElementById('timeline-editor').classList.remove('hidden');
+}
+function hideTimelineEditor(){ document.getElementById('timeline-editor').classList.add('hidden'); }
+async function loadTimelineForEdit(id){
+  try{
+    const res=await fetch(TAPI); const evts=await res.json(); const e=evts.find(ev=>ev.id===id);
+    if(!e)return; document.getElementById('tl-date').value=e.date; document.getElementById('tl-title').value=e.title;
+    document.getElementById('tl-desc').value=e.description||''; document.getElementById('tl-icon').value=e.icon||'';
+  }catch(e){console.error(e)}
+}
+async function saveTimelineEvent(){
+  const date=document.getElementById('tl-date').value; const title=document.getElementById('tl-title').value.trim();
+  const description=document.getElementById('tl-desc').value.trim(); const icon=document.getElementById('tl-icon').value;
+  if(!date||!title){ document.getElementById('tl-error').textContent='日期和标题为必填项'; document.getElementById('tl-error').classList.remove('hidden'); return; }
+  const url=tlEditingId?`${TAPI}/${tlEditingId}`:TAPI; const method=tlEditingId?'PUT':'POST';
+  try{
+    const res=await fetch(url,{method,headers:getHeaders(),body:JSON.stringify({date,title,description,icon})});
+    if(res.ok){ document.getElementById('tl-success').textContent=tlEditingId?'事件已更新':'事件已创建'; document.getElementById('tl-success').classList.remove('hidden'); document.getElementById('tl-error').classList.add('hidden'); if(!tlEditingId)hideTimelineEditor(); loadTimeline(); }
+    else{ const d=await res.json(); document.getElementById('tl-error').textContent=d.error||'保存失败'; document.getElementById('tl-error').classList.remove('hidden'); }
+  }catch(e){console.error('Save timeline error:',e);document.getElementById('tl-error').textContent='网络错误';document.getElementById('tl-error').classList.remove('hidden');}
+}
+async function deleteTimelineEvent(id){ if(!confirm('确认删除这个事件？'))return; try{ await fetch(`${TAPI}/${id}`,{method:'DELETE',headers:getHeaders()}); loadTimeline(); }catch(e){console.error(e)} }
+
+// Helpers
+function insertImage(url){ if(!url){ url=prompt('图片 URL:'); if(!url)return; } const alt=prompt('替代文字（可选）:')||''; const ta=document.getElementById('edit-content'); const tag=`<img src="${url}" alt="${alt}">`; const start=ta.selectionStart; ta.setRangeText(tag,start,ta.selectionEnd,'end'); ta.focus(); }
+let editImages=[];
+function renderEditImages(){ document.getElementById('edit-images').innerHTML=editImages.map((u,i)=>`<div class="link-row"><input type="text" value="${u}" placeholder="图片 URL" onchange="editImages[${i}]=this.value"><button class="btn-danger btn-sm" onclick="editImages.splice(${i},1);renderEditImages()">删除</button></div>`).join(''); }
+function addImage(){ editImages.push(''); renderEditImages(); }
+async function uploadAndInsert(){
+  const file=document.getElementById('img-file-input').files[0];
+  if(!file)return;
+  const fd=new FormData(); fd.append('file',file);
+  try{
+    const res=await fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+    if(res.ok){ const d=await res.json(); insertImage(d.url); }
+    else{ const err=await res.json().catch(()=>({})); alert('上传失败: '+(err.error||res.status)); }
+  }catch(e){ console.error('Upload error:',e); alert('上传失败: 网络错误'); }
+  document.getElementById('img-file-input').value='';
+}
+async function uploadGalleryImage(){
+  const file=document.getElementById('img-gallery-input').files[0];
+  if(!file)return;
+  const fd=new FormData(); fd.append('file',file);
+  try{
+    const res=await fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+    if(res.ok){ const d=await res.json(); editImages.push(d.url); renderEditImages(); }
+    else{ const err=await res.json().catch(()=>({})); alert('上传失败: '+(err.error||res.status)); }
+  }catch(e){ console.error('Upload error:',e); alert('上传失败: 网络错误'); }
+  document.getElementById('img-gallery-input').value='';
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Account
+let accountEmailVerified = false;
+let accountEmail = null;
+
+async function loadAccountInfo(){
+  try{
+    const res=await fetch('/api/auth/me',{headers:getHeaders()});
+    if(!res.ok)return;
+    const d=await res.json();
+    accountEmailVerified = d.email_verified;
+    accountEmail = d.email || null;
+    const status=document.getElementById('account-email-status');
+    const emailInput=document.getElementById('acc-email');
+    const codeSection=document.getElementById('acc-email-code-section');
+    const hint=document.getElementById('acc-email-hint');
+    const actionBtn=document.getElementById('acc-email-action-btn');
+    const msg=document.getElementById('acc-email-msg');
+
+    if(d.email && d.email_verified){
+      // State: bound and verified
+      status.textContent='已绑定: '+d.email+' (已验证)';
+      status.style.color='var(--green)';
+      emailInput.value=d.email;
+      emailInput.disabled=true;
+      codeSection.classList.remove('hidden');
+      hint.classList.add('hidden');
+      actionBtn.textContent='解绑邮箱';
+      actionBtn.disabled=true;
+      actionBtn.style.opacity='0.5';
+      msg.classList.add('hidden');
+    }else if(d.email && !d.email_verified){
+      // State: bound but not verified (pending)
+      status.textContent='已绑定: '+d.email+' (待验证)';
+      status.style.color='var(--muted)';
+      emailInput.value=d.email;
+      emailInput.disabled=false;
+      codeSection.classList.remove('hidden');
+      hint.classList.add('hidden');
+      actionBtn.textContent='确认绑定';
+      actionBtn.disabled=false;
+      actionBtn.style.opacity='1';
+    }else{
+      // State: not bound
+      status.textContent='尚未绑定邮箱';
+      status.style.color='var(--muted)';
+      emailInput.value='';
+      emailInput.disabled=false;
+      codeSection.classList.add('hidden');
+      hint.classList.add('hidden');
+      actionBtn.textContent='绑定邮箱';
+      actionBtn.disabled=false;
+      actionBtn.style.opacity='1';
+    }
+    // Show/hide password code section
+    document.getElementById('acc-pw-code-section').classList.toggle('hidden', !d.email_verified);
+  }catch(e){console.error(e)}
+}
+
+async function sendPwCode(){
+  try{
+    const res=await fetch('/api/auth/send-code',{method:'POST',headers:getHeaders()});
+    const d=await res.json();
+    if(res.ok){
+      const btn=document.getElementById('acc-pw-send-btn');
+      const orig=btn.textContent;
+      btn.textContent='已发送 ('+(d.maskedEmail||'')+')';
+      btn.disabled=true;
+      setTimeout(()=>{btn.textContent=orig;btn.disabled=false;},60000);
+    }else{
+      const msg=document.getElementById('acc-pw-msg');
+      msg.textContent=d.error||'发送失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
+    }
+  }catch(e){console.error(e);}
+}
+
+let sendCooldown = 0;
+
+async function sendEmailCode(){
+  if(sendCooldown > 0)return;
+  const msg=document.getElementById('acc-email-msg');
+  msg.classList.add('hidden');
+  try{
+    const res=await fetch('/api/auth/send-code',{method:'POST',headers:getHeaders()});
+    const d=await res.json();
+    if(res.ok){
+      const btn=document.getElementById('acc-email-send-btn');
+      const orig=btn.textContent;
+      btn.textContent='已发送 ('+(d.maskedEmail||'')+')';
+      btn.disabled=true;
+      // Enable unbind button if in bound state
+      const actionBtn=document.getElementById('acc-email-action-btn');
+      actionBtn.disabled=false;
+      actionBtn.style.opacity='1';
+      document.getElementById('acc-email-hint').classList.add('hidden');
+
+      sendCooldown=60;
+      const timer=setInterval(()=>{
+        sendCooldown--;
+        if(sendCooldown<=0){clearInterval(timer);btn.textContent=orig;btn.disabled=false;}
+        else{btn.textContent=sendCooldown+'s 后可重发';}
+      },1000);
+    }else{
+      msg.textContent=d.error||'发送失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
+    }
+  }catch(e){console.error(e);}
+}
+
+async function changePassword(){
+  const oldPw=document.getElementById('acc-old-pw').value;
+  const newPw=document.getElementById('acc-new-pw').value;
+  const newPw2=document.getElementById('acc-new-pw2').value;
+  const msg=document.getElementById('acc-pw-msg');
+  msg.classList.add('hidden');
+  if(!oldPw||!newPw||!newPw2){msg.textContent='请填写所有密码字段';msg.classList.remove('hidden');msg.style.color='var(--red)';return;}
+  if(newPw!==newPw2){msg.textContent='两次新密码不一致';msg.classList.remove('hidden');msg.style.color='var(--red)';return;}
+  if(newPw.length<8||newPw.length>32||!/[A-Z]/.test(newPw)||!/[a-z]/.test(newPw)||!/[0-9]/.test(newPw)){
+    msg.textContent='密码需8-32位，包含大小写字母和数字';msg.classList.remove('hidden');msg.style.color='var(--red)';return;
+  }
+  const body={oldPassword:oldPw,newPassword:newPw};
+  if(accountEmailVerified){
+    const code=document.getElementById('acc-pw-code').value.trim();
+    if(code.length!==6){msg.textContent='请输入邮箱验证码';msg.classList.remove('hidden');msg.style.color='var(--red)';return;}
+    body.code=code;
+  }
+  try{
+    const res=await fetch('/api/auth/change-password',{method:'POST',headers:getHeaders(),body:JSON.stringify(body)});
+    const d=await res.json();
+    if(res.ok){
+      msg.textContent='密码修改成功';msg.classList.remove('hidden');msg.style.color='var(--green)';
+      document.getElementById('acc-old-pw').value='';document.getElementById('acc-new-pw').value='';document.getElementById('acc-new-pw2').value='';
+      document.getElementById('acc-pw-code').value='';
+    }else{
+      msg.textContent=d.error||'修改失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
+    }
+  }catch(e){console.error(e);}
+}
+
+async function emailAction(){
+  const msg=document.getElementById('acc-email-msg');
+  const hint=document.getElementById('acc-email-hint');
+  msg.classList.add('hidden');
+
+  // State: not bound -> bind email
+  if(!accountEmail){
+    const email=document.getElementById('acc-email').value.trim();
+    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      msg.textContent='请输入有效的邮箱地址';msg.classList.remove('hidden');msg.style.color='var(--red)';return;
+    }
+    try{
+      const res=await fetch('/api/auth/bind-email',{method:'POST',headers:getHeaders(),body:JSON.stringify({email})});
+      const d=await res.json();
+      if(res.ok){
+        msg.textContent=d.message||'验证码已发送';msg.classList.remove('hidden');msg.style.color='var(--green)';
+        accountEmail=email;
+        document.getElementById('acc-email-code-section').classList.remove('hidden');
+        document.getElementById('acc-email-action-btn').textContent='确认绑定';
+      }else{
+        msg.textContent=d.error||'发送失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
+      }
+    }catch(e){console.error(e);}
+    return;
+  }
+
+  // State: bound but not verified -> verify
+  if(accountEmail && !accountEmailVerified){
+    const code=document.getElementById('acc-email-code').value.trim();
+    if(code.length!==6){
+      msg.textContent='请输入6位验证码';msg.classList.remove('hidden');msg.style.color='var(--red)';return;
+    }
+    try{
+      const res=await fetch('/api/auth/verify-email',{method:'POST',headers:getHeaders(),body:JSON.stringify({code})});
+      const d=await res.json();
+      if(res.ok){
+        msg.textContent='邮箱绑定成功';msg.classList.remove('hidden');msg.style.color='var(--green)';
+        loadAccountInfo();
+      }else{
+        msg.textContent=d.error||'验证失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
+      }
+    }catch(e){console.error(e);}
+    return;
+  }
+
+  // State: bound and verified -> unbind
+  const code=document.getElementById('acc-email-code').value.trim();
+  if(code.length!==6){
+    hint.textContent='请输入验证码后解绑';hint.classList.remove('hidden');
+    return;
+  }
+  hint.classList.add('hidden');
+  try{
+    const res=await fetch('/api/auth/unbind-email',{method:'POST',headers:getHeaders(),body:JSON.stringify({code})});
+    const d=await res.json();
+    if(res.ok){
+      msg.textContent='邮箱已解绑';msg.classList.remove('hidden');msg.style.color='var(--green)';
+      document.getElementById('acc-email-code').value='';
+      accountEmail=null;
+      accountEmailVerified=false;
+      loadAccountInfo();
+    }else{
+      msg.textContent=d.error||'解绑失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
+    }
+  }catch(e){console.error(e);}
+}
+
+let fgCooldown = 0;
+
+function showForgot(){
+  document.getElementById('login-gate').classList.add('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('forgot-password').classList.remove('hidden');
+  document.getElementById('fg-error').classList.add('hidden');
+  document.getElementById('fg-msg').classList.add('hidden');
+  document.getElementById('fg-code').value='';
+  document.getElementById('fg-new-pw').value='';
+  document.getElementById('fg-new-pw2').value='';
+}
+
+async function sendResetCode(){
+  if(fgCooldown > 0)return;
+  const username=document.getElementById('fg-user').value.trim();
+  const err=document.getElementById('fg-error');
+  err.classList.add('hidden');
+  if(!username){err.textContent='请先输入账户名';err.classList.remove('hidden');return;}
+  try{
+    const res=await fetch('/api/auth/send-reset-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});
+    const d=await res.json();
+    if(res.ok){
+      const btn=document.getElementById('fg-send-btn');
+      const orig=btn.textContent;
+      btn.textContent='已发送 ('+(d.maskedEmail||'')+')';
+      fgCooldown=60;
+      const timer=setInterval(()=>{
+        fgCooldown--;
+        if(fgCooldown<=0){clearInterval(timer);btn.textContent=orig;}
+        else{btn.textContent=fgCooldown+'s 后可重发';}
+      },1000);
+    }else{
+      err.textContent=d.error||'发送失败';err.classList.remove('hidden');
+    }
+  }catch(e){console.error(e);}
+}
+
+async function doResetPassword(){
+  const username=document.getElementById('fg-user').value.trim();
+  const newPw=document.getElementById('fg-new-pw').value;
+  const newPw2=document.getElementById('fg-new-pw2').value;
+  const err=document.getElementById('fg-error');
+  const msg=document.getElementById('fg-msg');
+  err.classList.add('hidden');msg.classList.add('hidden');
+  if(!username||!newPw||!newPw2){err.textContent='请填写所有字段';err.classList.remove('hidden');return;}
+  if(newPw!==newPw2){err.textContent='两次新密码不一致';err.classList.remove('hidden');return;}
+  if(newPw.length<8||newPw.length>32||!/[A-Z]/.test(newPw)||!/[a-z]/.test(newPw)||!/[0-9]/.test(newPw)){
+    err.textContent='密码需8-32位，包含大小写字母和数字';err.classList.remove('hidden');return;
+  }
+  const body={username,newPassword:newPw};
+  const code=document.getElementById('fg-code').value.trim();
+  if(code.length===6)body.code=code;
+  try{
+    const res=await fetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await res.json();
+    if(res.ok){
+      msg.textContent='密码重置成功，请返回登录';msg.classList.remove('hidden');msg.style.color='var(--green)';
+      document.getElementById('fg-new-pw').value='';document.getElementById('fg-new-pw2').value='';document.getElementById('fg-code').value='';
+    }else{
+      err.textContent=d.error||'重置失败';err.classList.remove('hidden');
+    }
+  }catch(e){console.error(e);}
+}
+
+async function changeUsername(){
+  const newUsername=document.getElementById('acc-username').value.trim();
+  const msg=document.getElementById('acc-user-msg');
+  msg.classList.add('hidden');
+  if(!newUsername){msg.textContent='请输入新用户名';msg.classList.remove('hidden');msg.style.color='var(--red)';return;}
+  try{
+    const res=await fetch('/api/auth/change-username',{method:'POST',headers:getHeaders(),body:JSON.stringify({newUsername})});
+    const d=await res.json();
+    if(res.ok){
+      msg.textContent='用户名已修改为: '+d.newUsername;msg.classList.remove('hidden');msg.style.color='var(--green)';
+      document.getElementById('acc-username').value='';
+      // Re-login required since token is invalidated
+      localStorage.removeItem('blog_token');
+      setTimeout(()=>{showLogin('用户名已修改，请重新登录');},1500);
+    }else{
+      msg.textContent=d.error||'修改失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
+    }
+  }catch(e){console.error(e);}
+}
+
+
+</script>
+
+</body>
+</html>

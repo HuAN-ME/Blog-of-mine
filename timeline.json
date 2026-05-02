@@ -1,0 +1,32 @@
+{
+  "events": [
+    {
+      "id": 1,
+      "date": "2024-01-15",
+      "title": "开始学习编程",
+      "description": "接触了 HTML 和 CSS",
+      "icon": "code"
+    },
+    {
+      "id": 2,
+      "date": "2024-06-01",
+      "title": "完成第一个项目",
+      "description": "搭建了个人博客",
+      "icon": "star"
+    },
+    {
+      "id": 3,
+      "date": "2025-01-01",
+      "title": "进入 AI 领域",
+      "description": "开始研究大语言模型",
+      "icon": "work"
+    },
+    {
+      "id": 4,
+      "date": "2026-05-02",
+      "title": "上载图片接口测试",
+      "description": "成功调试图片上传接口",
+      "icon": "award"
+    }
+  ]
+}

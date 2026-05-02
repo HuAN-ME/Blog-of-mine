@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的博客</title>
+<style>
+  :root {
+    --text: #ffffff;
+    --muted: rgba(255,255,255,0.6);
+    --accent: #60a5fa;
+    --border: rgba(255,255,255,0.12);
+    --glass: rgba(255,255,255,0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    background: #0d0d0d;
+    color: var(--text);
+    min-height: 100vh;
+    position: relative;
+  }
+  .bg-layer { position: fixed; inset: 0; z-index: -3; }
+  .bg-layer video, .bg-layer img { width: 100%; height: 100%; object-fit: cover; }
+  .bg-overlay { position: fixed; inset: 0; z-index: -2; background: rgba(0,0,0,0.55); }
+  .bg-gradient { position: fixed; inset: 0; z-index: -3; background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
+
+  /* Profile */
+  .profile-card {
+    display: flex; gap: 1.25rem; align-items: center;
+    background: rgba(255,255,255,0.07); backdrop-filter: blur(10px);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 1.5rem; margin-bottom: 2rem;
+    will-change: transform;
+  }
+  .profile-card .avatar { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.1); background-size: cover; background-position: center; flex-shrink: 0; }
+  .profile-card .info { flex: 1; min-width: 0; }
+  .profile-card .name { font-size: 1.25rem; font-weight: 700; }
+  .profile-card .bio { color: var(--muted); font-size: 0.9rem; margin-top: 0.15rem; }
+  .profile-card .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+  .profile-card .tag { font-size: 0.75rem; padding: 0.15em 0.6em; border-radius: 999px; background: rgba(255,255,255,0.1); border: 1px solid var(--border); color: var(--muted); }
+
+  /* Header */
+  .blog-header { margin-bottom: 2rem; }
+  .blog-header h1 { font-size: 2rem; font-weight: 700; }
+  .blog-header p { color: var(--muted); font-size: 1rem; margin-top: 0.25rem; }
+
+  /* Post Grid */
+  .post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+
+  /* Post Card */
+  .post-card {
+    position: relative; height: 360px; border-radius: 16px; overflow: hidden; cursor: pointer;
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    will-change: transform;
+    contain: layout style paint;
+  }
+  .post-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .post-card.no-carousel { display: flex; align-items: flex-end; }
+  .post-card.no-carousel .card-info { position: static; border-radius: 0; padding: 1.5rem; width: 100%; }
+
+  /* Carousel */
+  .carousel { position: absolute; inset: 0; }
+  .carousel-track { display: flex; height: 100%; transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
+  .carousel-track img { height: 100%; object-fit: cover; flex-shrink: 0; }
+  .carousel-dots { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+  .carousel-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); transition: background 0.2s; cursor: pointer; }
+  .carousel-dots span.active { background: #fff; }
+  .carousel-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.45); border: none; color: #fff; cursor: pointer;
+    opacity: 0; transition: opacity 0.2s; z-index: 2; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .post-card:hover .carousel-arrow { opacity: 1; }
+  .carousel-arrow.prev { left: 8px; }
+  .carousel-arrow.next { right: 8px; }
+
+  /* Card info */
+  .card-info {
+    position: absolute; bottom: 0; left: 0; z-index: 3;
+    background: rgba(0,0,0,0.65);
+    padding: 0.75rem 1rem; border-radius: 0 10px 0 0; max-width: 85%;
+  }
+  .card-info .title { font-size: 0.95rem; font-weight: 600; }
+  .card-info .date { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 2rem;
+  }
+  .modal-box {
+    background: rgba(20,20,30,0.92); backdrop-filter: blur(12px);
+    border: 1px solid var(--border); border-radius: 16px;
+    max-width: 720px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 2rem;
+    color: #e0e0e0;
+  }
+  .modal-box h2 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #fff; }
+  .modal-box .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .modal-box .body { font-size: 1rem; line-height: 1.8; }
+  .modal-box .body p { margin-bottom: 0.8rem; }
+  .modal-box .body img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
+  .modal-box .body pre { background: rgba(0,0,0,0.35); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.9rem; margin-bottom: 0.8rem; }
+  .modal-box .body code { background: rgba(0,0,0,0.35); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; }
+  .modal-box .body pre code { background: none; padding: 0; }
+  .modal-close { float: right; background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: #fff; }
+
+  /* Footer */
+  .site-footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
+  .footer-links { display: flex; gap: 1rem; margin-top: 0.5rem; }
+  .footer-links a { color: var(--accent); text-decoration: none; }
+  .footer-links a:hover { text-decoration: underline; }
+
+  .hidden { display: none !important; }
+
+  /* Login */
+  .login-btn { position: fixed; top: 1rem; right: 1rem; z-index: 50; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .login-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
+
+  /* Timeline */
+  .timeline-section { margin-top: 3rem; }
+  .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 2rem; color: var(--text); }
+  .timeline { position: relative; }
+  .timeline-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border); transform: translateX(-50%); }
+  .timeline-list { display: flex; flex-direction: column; gap: 2rem; position: relative; }
+  .tl-item { display: flex; align-items: flex-start; position: relative; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
+  .tl-item.visible { opacity: 1; transform: translateY(0); }
+  .tl-item:nth-child(odd) { flex-direction: row; padding-right: calc(50% + 2rem); }
+  .tl-item:nth-child(even) { flex-direction: row-reverse; padding-left: calc(50% + 2rem); }
+  .tl-dot { position: absolute; left: 50%; top: 14px; transform: translate(-50%,-50%); width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid rgba(0,0,0,0.4); z-index: 2; }
+  .tl-card { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; width: 100%; }
+  .tl-card .tl-icon { font-size: 1.25rem; margin-bottom: 0.4rem; }
+  .tl-card .tl-date { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .tl-card .tl-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .tl-card .tl-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+  @media (max-width: 640px) {
+    .timeline-line { left: 1rem; }
+    .tl-item:nth-child(odd), .tl-item:nth-child(even) { flex-direction: row; padding: 0 0 0 2.5rem; }
+    .tl-dot { left: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-gradient"></div>
+<div class="bg-layer"></div>
+<div class="bg-overlay"></div>
+
+<div class="container">
+  <button class="login-btn" onclick="location.href='admin.html'" title="管理后台">&#x1f512;</button>
+
+  <div id="profile-section" class="profile-card hidden">
+    <div id="profile-avatar" class="avatar"></div>
+    <div class="info">
+      <div id="profile-name" class="name"></div>
+      <div id="profile-bio" class="bio"></div>
+      <div id="profile-tags" class="tags"></div>
+    </div>
+  </div>
+
+  <div class="blog-header">
+    <h1 id="site-title">我的博客</h1>
+    <p id="site-subtitle">写点想写的东西。</p>
+  </div>
+
+  <div id="post-grid" class="post-grid"></div>
+
+  <section id="timeline-section" class="timeline-section hidden">
+    <h2 class="section-title">时间轴</h2>
+    <div class="timeline">
+      <div class="timeline-line"></div>
+      <div id="timeline-list" class="timeline-list"></div>
+    </div>
+  </section>
+
+  <div class="site-footer">
+    <span id="footer-text">&copy; 2026 我的博客</span>
+    <div id="footer-links" class="footer-links"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal-overlay hidden" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+let posts = [];
+let carousels = {};
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    document.getElementById('site-title').textContent = cfg.title;
+    document.getElementById('site-subtitle').textContent = cfg.subtitle;
+    document.getElementById('footer-text').textContent = cfg.footer;
+    const linksEl = document.getElementById('footer-links');
+    linksEl.innerHTML = (cfg.links||[]).map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`).join('');
+    renderProfile(cfg.profile);
+    loadBackground(cfg.background);
+  } catch {}
+}
+
+function loadBackground(bg) {
+  const layer = document.querySelector('.bg-layer');
+  layer.innerHTML = '';
+  if (!bg || !bg.url || !bg.type) return;
+  if (bg.type === 'video') {
+    layer.innerHTML = `<video src="${bg.url}" autoplay muted loop playsinline></video>`;
+  } else if (bg.type === 'image') {
+    layer.innerHTML = `<img src="${bg.url}">`;
+  }
+}
+
+function renderProfile(p) {
+  const sec = document.getElementById('profile-section');
+  if (!p || (!p.name && !p.bio && !(p.tags||[]).length)) { sec.classList.add('hidden'); return; }
+  sec.classList.remove('hidden');
+  document.getElementById('profile-avatar').style.backgroundImage = p.avatar ? `url(${p.avatar})` : 'none';
+  document.getElementById('profile-name').textContent = p.name||'';
+  document.getElementById('profile-bio').textContent = p.bio||'';
+  document.getElementById('profile-tags').innerHTML = (p.tags||[]).map(t => `<span class="tag">${t}</span>`).join('');
+}
+
+async function loadPosts() {
+  try {
+    const res = await fetch('/api/posts');
+    posts = await res.json();
+    renderGrid();
+  } catch {
+    document.getElementById('post-grid').innerHTML = '<p style="color:var(--muted)">加载失败</p>';
+  }
+}
+
+function getPostImages(p) {
+  const imgs = p.images||[];
+  if (imgs.length) return imgs;
+  const m = p.content.match(/<img[^>]+src="([^"]+)"/gi);
+  if (!m) return [];
+  return m.map(t => { const s = t.match(/src="([^"]+)"/i); return s ? s[1] : ''; }).filter(Boolean);
+}
+
+function renderGrid() {
+  const grid = document.getElementById('post-grid');
+  if (!posts.length) { grid.innerHTML = '<p style="color:var(--muted)">还没有文章。</p>'; return; }
+  grid.innerHTML = posts.map(p => {
+    const imgs = getPostImages(p);
+    if (imgs.length) {
+      const pid = 'c' + p.id;
+      return `<div class="post-card" onclick="showPost(${p.id})">
+        <div class="carousel" id="${pid}">
+          <div class="carousel-track">${imgs.map(u => `<img src="${u}" loading="lazy">`).join('')}</div>
+          <div class="carousel-dots">${imgs.map((_,i) => `<span data-idx="${i}"></span>`).join('')}</div>
+          <button class="carousel-arrow prev" onclick="event.stopPropagation();prevSlide('${pid}')">&#8249;</button>
+          <button class="carousel-arrow next" onclick="event.stopPropagation();nextSlide('${pid}')">&#8250;</button>
+        </div>
+        <div class="card-info"><div class="title">${esc(p.title)}</div><div class="date">${p.date}</div></div>
+      </div>`;
+    }
+    return `<div class="post-card no-carousel" onclick="showPost(${p.id})">
+      <div class="card-info"><div class="title">${esc(p.title)}</div><div class="date">${p.date}</div></div>
+    </div>`;
+  }).join('');
+  initCarousels();
+}
+
+function initCarousels() {
+  posts.forEach(p => {
+    const imgs = getPostImages(p);
+    if (!imgs.length) return;
+    const pid = 'c' + p.id;
+    carousels[pid] = { idx: 0, len: imgs.length, timer: null };
+    syncCarouselWidth(pid);
+    const dots = document.getElementById(pid).querySelectorAll('.carousel-dots span');
+    dots.forEach(d => {
+      d.onclick = e => { e.stopPropagation(); goSlide(pid, +d.dataset.idx); };
+    });
+    dots[0].classList.add('active');
+    startAuto(pid);
+  });
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    Object.keys(carousels).forEach(pid => syncCarouselWidth(pid));
+  }, 200);
+});
+
+function syncCarouselWidth(pid) {
+  const carousel = document.getElementById(pid);
+  if (!carousel) return;
+  const w = carousel.offsetWidth;
+  carousel.querySelectorAll('.carousel-track img').forEach(img => img.style.width = w + 'px');
+}
+
+function goSlide(pid, idx) {
+  const c = carousels[pid];
+  c.idx = idx;
+  const track = document.getElementById(pid).querySelector('.carousel-track');
+  const w = track.querySelector('img').offsetWidth;
+  track.style.transform = `translateX(-${idx * w}px)`;
+  document.getElementById(pid).querySelectorAll('.carousel-dots span').forEach((d,i) => d.classList.toggle('active', i===idx));
+  startAuto(pid);
+}
+
+function nextSlide(pid) {
+  const c = carousels[pid];
+  goSlide(pid, (c.idx + 1) % c.len);
+}
+
+function prevSlide(pid) {
+  const c = carousels[pid];
+  goSlide(pid, (c.idx - 1 + c.len) % c.len);
+}
+
+function startAuto(pid) {
+  const c = carousels[pid];
+  if (c.timer) clearInterval(c.timer);
+  c.timer = setInterval(() => { carousels[pid].idx = (carousels[pid].idx + 1) % carousels[pid].len; goSlide(pid, carousels[pid].idx); }, 5000);
+}
+
+function showPost(id) {
+  const post = posts.find(p => p.id === id);
+  if (!post) return;
+  document.getElementById('modal-body').innerHTML = `<h2>${post.title}</h2><div class="meta">${post.date}</div><div class="body">${post.content}</div>`;
+  document.getElementById('modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal')) return;
+  document.getElementById('modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Timeline
+async function loadTimeline(){
+  try{
+    const res=await fetch('/api/timeline');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const evts=await res.json();
+    if(!evts||!evts.length)return;
+    const sec=document.getElementById('timeline-section');
+    if(!sec)return;
+    sec.classList.remove('hidden');
+    const list=document.getElementById('timeline-list');
+    if(!list)return;
+    const iconMap={code:'⌨',book:'📖',star:'⭐',work:'💼',education:'🎓',heart:'❤️',award:'🏆',coffee:'☕'};
+    list.innerHTML=evts.map(e=>`<div class="tl-item"><div class="tl-dot"></div><div class="tl-card"><div class="tl-icon">${iconMap[e.icon]||''}</div><div class="tl-date">${esc(e.date)}</div><div class="tl-title">${esc(e.title||'')}</div>${e.description?`<div class="tl-desc">${esc(e.description)}</div>`:''}</div></div>`).join('');
+    const items=list.querySelectorAll('.tl-item');
+    if(!items.length)return;
+    const obs=new IntersectionObserver((entries)=>{ entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); obs.unobserve(en.target); } }); },{threshold:0.1});
+    items.forEach(el=>obs.observe(el));
+  }catch(e){ console.error('Timeline load error:',e); }
+}
+
+loadConfig();
+loadPosts();
+loadTimeline();
+</script>
+</body>
+</html>

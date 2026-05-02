@@ -1,0 +1,23 @@
+{
+  "title": "HELLO WORLD",
+  "subtitle": "写点想写的东西。",
+  "footer": "© 2026 我的博客",
+  "links": [
+    {
+      "label": "进入GitHub",
+      "url": "https://github.com/"
+    }
+  ],
+  "background": {
+    "type": "image",
+    "url": "/images/bg/background.webp"
+  },
+  "profile": {
+    "avatar": "/images/avatars/avatar.webp",
+    "name": "ACTION",
+    "bio": "我是谁我在哪我要干嘛",
+    "tags": [
+      "AI Agent"
+    ]
+  }
+}
