@@ -14,6 +14,16 @@ const PORT = process.env.PORT || 3000;
 const POSTS_DIR = path.join(__dirname, 'posts');
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 const TIMELINE_PATH = path.join(__dirname, 'timeline.json');
+const VISITS_FILE = path.join(__dirname, 'visits.json');
+
+// Visits tracking
+let visits = {};
+if (fs.existsSync(VISITS_FILE)) {
+  try { visits = JSON.parse(fs.readFileSync(VISITS_FILE, 'utf8')); } catch {}
+}
+function saveVisits() {
+  fs.writeFileSync(VISITS_FILE, JSON.stringify(visits), 'utf8');
+}
 
 // MySQL connection pool
 const pool = mysql.createPool({
@@ -51,6 +61,17 @@ const CODE_TTL = 5 * 60 * 1000; // 5 minutes
 const CODE_COOLDOWN = 60 * 1000; // 1 minute between resends
 
 app.use(express.json());
+
+// Visit tracking middleware
+app.use((req, res, next) => {
+  if (req.method === 'GET' && (req.path === '/' || req.path === '/index.html')) {
+    const today = new Date().toISOString().slice(0, 10);
+    visits[today] = (visits[today] || 0) + 1;
+    if (visits[today] % 10 === 0) saveVisits();
+  }
+  next();
+});
+
 app.use(express.static(__dirname));
 
 // ── DB init ──
@@ -664,6 +685,20 @@ const upload = multer({
   }
 });
 
+// GET /api/visits?days=30
+app.get('/api/visits', checkAdmin, (req, res) => {
+  const days = parseInt(req.query.days) || 30;
+  const result = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    result.push({ date: key, count: visits[key] || 0 });
+  }
+  res.json(result);
+});
+
 app.post('/api/upload', checkAdmin, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: '请选择图片文件' });
   const url = '/images/posts/' + req.file.filename;
@@ -671,6 +706,12 @@ app.post('/api/upload', checkAdmin, upload.single('file'), (req, res) => {
 });
 
 // ── Start ──
+
+// Persist visits on exit
+process.on('SIGINT', () => { saveVisits(); process.exit(); });
+process.on('SIGTERM', () => { saveVisits(); process.exit(); });
+process.on('exit', () => saveVisits());
+
 initDB()
   .then(() => {
     app.listen(PORT, () => {

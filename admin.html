@@ -56,6 +56,7 @@
   .editor-toolbar button:hover { background:rgba(255,255,255,0.15); }
   .editor-body { min-height:200px; padding:0.75rem; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.14); color:var(--text); line-height:1.6; outline:none; }
   .editor-body:focus { border-color:var(--accent); }
+  .editor-body img { max-width:100%; height:auto; }
 </style>
 </head>
 <body>
@@ -102,6 +103,7 @@
     <button onclick="switchTab('settings')">站点设置</button>
     <button onclick="switchTab('timeline')">时间轴管理</button>
     <button onclick="switchTab('account')">账户安全</button>
+    <button onclick="switchTab('visits')">访问统计</button>
   </div>
 
   <div id="tab-posts" class="tab-panel active">
@@ -169,6 +171,20 @@
       <div id="acc-email-hint" style="font-size:0.8rem;color:var(--red);margin-bottom:0.5rem" class="hidden"></div>
       <button class="btn-primary" id="acc-email-action-btn" onclick="emailAction()">绑定邮箱</button>
       <div id="acc-email-msg" class="success hidden"></div>
+    </div>
+  </div>
+
+  <div id="tab-visits" class="tab-panel">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h2 style="font-size:1.1rem;margin:0">每日访问量</h2>
+        <select id="visits-range" onchange="loadVisits()" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:6px;font-size:0.9rem;cursor:pointer">
+          <option value="7">近7天</option>
+          <option value="30" selected>近30天</option>
+          <option value="90">近90天</option>
+        </select>
+      </div>
+      <canvas id="visits-canvas" style="width:100%;height:300px"></canvas>
     </div>
   </div>
 
@@ -339,10 +355,10 @@ async function deletePost(id){ if(!confirm('确认删除这篇文章？'))return
 
 function switchTab(name){
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
-  const btns=document.querySelectorAll('.tabs button'); const map={posts:0,profile:1,settings:2,timeline:3,account:4};
+  const btns=document.querySelectorAll('.tabs button'); const map={posts:0,profile:1,settings:2,timeline:3,account:4,visits:5};
   if(map[name]!==undefined)btns[map[name]].classList.add('active');
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active')); document.getElementById('tab-'+name).classList.add('active');
-  if(name==='settings')loadSiteConfig(); if(name==='profile')loadProfileConfig(); if(name==='timeline')loadTimeline(); if(name==='account')loadAccountInfo();
+  if(name==='settings')loadSiteConfig(); if(name==='profile')loadProfileConfig(); if(name==='timeline')loadTimeline(); if(name==='account')loadAccountInfo(); if(name==='visits')loadVisits();
 }
 
 // Profile
@@ -756,6 +772,129 @@ async function changeUsername(){
   }catch(e){console.error(e);}
 }
 
+function loadVisits(){
+  const days=document.getElementById('visits-range').value;
+  fetch('/api/visits?days='+days,{headers:getHeaders()})
+    .then(r=>r.json())
+    .then(data=>{
+      const canvas=document.getElementById('visits-canvas');
+      const ctx=canvas.getContext('2d');
+      const dpr=window.devicePixelRatio||1;
+      const rect=canvas.getBoundingClientRect();
+      canvas.width=rect.width*dpr;
+      canvas.height=rect.height*dpr;
+      ctx.scale(dpr,dpr);
+      drawLineChart(ctx,data,rect.width,rect.height);
+    });
+}
+
+function drawLineChart(ctx,data,W,H){
+  const P={top:20,right:20,bottom:50,left:50};
+  const pw=W-P.left-P.right;
+  const ph=H-P.top-P.bottom;
+  const max=Math.max(...data.map(d=>d.count),1);
+  const yMax=Math.ceil(max*1.2)||1;
+
+  // Clear
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.08)';
+  ctx.lineWidth=1;
+  const ySteps=5;
+  for(let i=0;i<=ySteps;i++){
+    const y=P.top+(ph/ySteps)*i;
+    ctx.beginPath(); ctx.moveTo(P.left,y); ctx.lineTo(W-P.right,y); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.font='11px -apple-system,sans-serif';
+    ctx.textAlign='right';
+    ctx.fillText(Math.round(yMax-(yMax/ySteps)*i),P.left-8,y+4);
+  }
+
+  // X labels
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  const step=Math.max(1,Math.floor(data.length/6));
+  for(let i=0;i<data.length;i+=step){
+    const x=P.left+(pw/(data.length-1))*i;
+    const d=data[i].date.slice(5);
+    ctx.fillText(d,x,H-P.bottom+18);
+  }
+
+  if(max===0){
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.font='14px -apple-system,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('暂无访问记录',W/2,H/2);
+    return;
+  }
+
+  // Area fill
+  ctx.beginPath();
+  for(let i=0;i<data.length;i++){
+    const x=P.left+(pw/(data.length-1))*i;
+    const y=P.top+ph-(data[i].count/yMax)*ph;
+    if(i===0)ctx.moveTo(x,P.top+ph);
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(P.left+pw,P.top+ph);
+  ctx.closePath();
+  const g=ctx.createLinearGradient(0,P.top,0,P.top+ph);
+  g.addColorStop(0,'rgba(96,165,250,0.2)');
+  g.addColorStop(1,'rgba(96,165,250,0.02)');
+  ctx.fillStyle=g;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle='#60a5fa';
+  ctx.lineWidth=2;
+  for(let i=0;i<data.length;i++){
+    const x=P.left+(pw/(data.length-1))*i;
+    const y=P.top+ph-(data[i].count/yMax)*ph;
+    if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Dots
+  for(let i=0;i<data.length;i++){
+    const x=P.left+(pw/(data.length-1))*i;
+    const y=P.top+ph-(data[i].count/yMax)*ph;
+    ctx.beginPath();
+    ctx.arc(x,y,2.5,0,Math.PI*2);
+    ctx.fillStyle='#60a5fa';
+    ctx.fill();
+  }
+}
+
+window.addEventListener('resize',()=>{
+  if(document.getElementById('tab-visits').classList.contains('active')) loadVisits();
+});
+
+function initEditorPaste(){
+  const editor=document.getElementById('edit-content');
+  if(!editor)return;
+  editor.addEventListener('paste',async(e)=>{
+    const items=e.clipboardData?.items;
+    if(!items)return;
+    for(const item of items){
+      if(item.type.startsWith('image/')){
+        e.preventDefault();
+        const file=item.getAsFile();
+        try{
+          const fd=new FormData();fd.append('file',file);
+          const res=await fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+          if(res.ok){
+            const d=await res.json();
+            document.execCommand('insertHTML',false,'<img src="'+d.url+'" alt="">');
+          }
+        }catch(ex){console.error('Paste image upload failed:',ex);}
+        break;
+      }
+    }
+  });
+}
+initEditorPaste();
 
 </script>
 

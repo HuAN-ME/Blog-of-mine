@@ -66,12 +66,9 @@
   .post-card.no-carousel .card-info { position: static; border-radius: 0; padding: 1.5rem; width: 100%; }
 
   /* Carousel */
-  .carousel { position: relative; overflow: hidden; }
+  .carousel { position: relative; overflow: hidden; max-height: 500px; }
   .carousel-track { display: flex; align-items: flex-start; transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
   .carousel-track img { width: 100%; height: auto; display: block; flex-shrink: 0; }
-  .carousel-dots { position: absolute; bottom: 65px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
-  .carousel-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); transition: background 0.2s; cursor: pointer; }
-  .carousel-dots span.active { background: #fff; }
   .carousel-arrow {
     position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
     background: rgba(0,0,0,0.45); border: none; color: #fff; cursor: pointer;
@@ -262,7 +259,6 @@ function renderGrid() {
       return `<div class="post-card" onclick="showPost(${p.id})">
         <div class="carousel" id="${pid}">
           <div class="carousel-track">${imgs.map(u => `<img src="${u}" loading="lazy">`).join('')}</div>
-          <div class="carousel-dots">${imgs.map((_,i) => `<span data-idx="${i}"></span>`).join('')}</div>
           <button class="carousel-arrow prev" onclick="event.stopPropagation();prevSlide('${pid}')">&#8249;</button>
           <button class="carousel-arrow next" onclick="event.stopPropagation();nextSlide('${pid}')">&#8250;</button>
         </div>
@@ -283,11 +279,6 @@ function initCarousels() {
     const pid = 'c' + p.id;
     carousels[pid] = { idx: 0, len: imgs.length, timer: null };
     syncCarouselWidth(pid);
-    const dots = document.getElementById(pid).querySelectorAll('.carousel-dots span');
-    dots.forEach(d => {
-      d.onclick = e => { e.stopPropagation(); goSlide(pid, +d.dataset.idx); };
-    });
-    dots[0].classList.add('active');
     startAuto(pid);
   });
 }
@@ -317,7 +308,6 @@ function goSlide(pid, idx) {
   const w = carousel.offsetWidth;
   const track = carousel.querySelector('.carousel-track');
   track.style.transform = `translateX(-${idx * w}px)`;
-  document.getElementById(pid).querySelectorAll('.carousel-dots span').forEach((d,i) => d.classList.toggle('active', i===idx));
   startAuto(pid);
 }
 
