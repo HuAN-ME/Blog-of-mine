@@ -67,7 +67,7 @@
 
   /* Carousel */
   .carousel { position: relative; overflow: hidden; max-height: 500px; }
-  .carousel-track { display: flex; align-items: flex-start; transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
+  .carousel-track { display: flex; align-items: flex-start; transition: transform 0.25s ease-out; will-change: transform; }
   .carousel-track img { width: 100%; height: auto; display: block; flex-shrink: 0; }
   .carousel-arrow {
     position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
@@ -235,6 +235,10 @@ async function loadPosts() {
   try {
     const res = await fetch('/api/posts');
     posts = await res.json();
+    for (let i = posts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [posts[i], posts[j]] = [posts[j], posts[i]];
+    }
     renderGrid();
   } catch {
     document.getElementById('post-grid').innerHTML = '<p style="color:var(--muted)">加载失败</p>';
@@ -324,7 +328,7 @@ function prevSlide(pid) {
 function startAuto(pid) {
   const c = carousels[pid];
   if (c.timer) clearInterval(c.timer);
-  c.timer = setInterval(() => { carousels[pid].idx = (carousels[pid].idx + 1) % carousels[pid].len; goSlide(pid, carousels[pid].idx); }, 5000);
+  c.timer = setInterval(() => { carousels[pid].idx = (carousels[pid].idx + 1) % carousels[pid].len; goSlide(pid, carousels[pid].idx); }, 3000);
 }
 
 function showPost(id) {
