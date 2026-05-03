@@ -51,6 +51,11 @@
   .modal-box p { margin-bottom:1.25rem; color:var(--text); }
   .modal-box .modal-actions { display:flex; gap:0.75rem; justify-content:center; }
   .btn-cancel { background:rgba(255,255,255,0.1); color:var(--muted); border:1px solid var(--border); }
+  .editor-toolbar { display:flex; gap:0.25rem; margin-bottom:0.5rem; flex-wrap:wrap; }
+  .editor-toolbar button { padding:0.25rem 0.5rem; font-size:0.8rem; background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--text); border-radius:4px; cursor:pointer; }
+  .editor-toolbar button:hover { background:rgba(255,255,255,0.15); }
+  .editor-body { min-height:200px; padding:0.75rem; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.14); color:var(--text); line-height:1.6; outline:none; }
+  .editor-body:focus { border-color:var(--accent); }
 </style>
 </head>
 <body>
@@ -173,7 +178,20 @@
     <div class="form-group"><label>标题</label><input type="text" id="edit-title" placeholder="文章标题"></div>
     <div class="form-group"><label>日期</label><input type="date" id="edit-date"></div>
     <div class="form-group"><label>摘要</label><input type="text" id="edit-excerpt" placeholder="简短摘要（可选）"></div>
-    <div class="form-group"><label>内容（HTML）</label><textarea id="edit-content" placeholder="&lt;p&gt;文章正文...&lt;/p&gt;"></textarea><div style="display:flex;gap:0.5rem;margin-top:0.25rem"><button class="btn-ghost btn-sm" onclick="insertImage()">插入图片 URL</button><button class="btn-ghost btn-sm" onclick="document.getElementById('img-file-input').click()">上传图片</button><input type="file" id="img-file-input" accept="image/*" style="display:none" onchange="uploadAndInsert()"></div></div>
+    <div class="form-group">
+      <label>内容</label>
+      <div class="editor-toolbar" id="editor-toolbar">
+        <button onclick="execCmd('bold')"><b>B</b></button>
+        <button onclick="execCmd('italic')"><i>I</i></button>
+        <button onclick="execCmd('underline')"><u>U</u></button>
+        <button onclick="execCmd('strikeThrough')"><s>S</s></button>
+        <button onclick="insertLink()">链接</button>
+        <button onclick="insertImage()">插入图片 URL</button>
+        <button onclick="document.getElementById('img-file-input').click()">上传图片</button>
+      </div>
+      <div class="editor-body" id="edit-content" contenteditable="true"></div>
+      <input type="file" id="img-file-input" accept="image/*" style="display:none" onchange="uploadAndInsert()">
+    </div>
     <div class="form-group"><label>文章配图</label><div id="edit-images"></div><div style="display:flex;gap:0.5rem;margin-top:0.5rem"><button class="btn-primary btn-sm" onclick="addImage()">+ 添加图片 URL</button><button class="btn-primary btn-sm" onclick="document.getElementById('img-gallery-input').click()">上传配图</button><input type="file" id="img-gallery-input" accept="image/*" style="display:none" onchange="uploadGalleryImage()"></div><p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">建议使用 16:9 比例图片。多张图片将自动轮播展示。</p></div>
     <div class="form-actions"><button class="btn-primary" id="save-btn" onclick="savePost()">保存</button><button class="btn-ghost" onclick="hideEditor()">取消</button></div>
     <div id="edit-error" class="error hidden"></div>
@@ -288,7 +306,7 @@ async function loadPosts(){
 function showEditor(){
   editingId=null; document.getElementById('editor-title').textContent='新建文章';
   document.getElementById('edit-title').value=''; document.getElementById('edit-date').value=new Date().toISOString().slice(0,10);
-  document.getElementById('edit-excerpt').value=''; document.getElementById('edit-content').value='';
+  document.getElementById('edit-excerpt').value=''; document.getElementById('edit-content').innerHTML='';
   editImages=[]; renderEditImages(); document.getElementById('edit-error').classList.add('hidden');
   document.getElementById('edit-success').classList.add('hidden'); document.getElementById('save-btn').textContent='保存';
   document.getElementById('editor').classList.remove('hidden'); document.getElementById('edit-title').focus();
@@ -299,7 +317,7 @@ async function editPost(id){
   const res=await fetch(API); const posts=await res.json(); const post=posts.find(p=>p.id===id);
   if(!post) return; editingId=id; document.getElementById('editor-title').textContent='编辑文章';
   document.getElementById('edit-title').value=post.title; document.getElementById('edit-date').value=post.date;
-  document.getElementById('edit-excerpt').value=post.excerpt||''; document.getElementById('edit-content').value=post.content;
+  document.getElementById('edit-excerpt').value=post.excerpt||''; document.getElementById('edit-content').innerHTML=post.content;
   editImages=post.images||[]; renderEditImages(); document.getElementById('edit-error').classList.add('hidden');
   document.getElementById('edit-success').classList.add('hidden'); document.getElementById('save-btn').textContent='更新';
   document.getElementById('editor').classList.remove('hidden'); document.getElementById('edit-title').focus();
@@ -307,7 +325,7 @@ async function editPost(id){
 
 async function savePost(){
   const title=document.getElementById('edit-title').value.trim(); const date=document.getElementById('edit-date').value;
-  const excerpt=document.getElementById('edit-excerpt').value.trim(); const content=document.getElementById('edit-content').value.trim();
+  const excerpt=document.getElementById('edit-excerpt').value.trim(); const content=document.getElementById('edit-content').innerHTML.trim();
   if(!title||!date||!content){ document.getElementById('edit-error').textContent='标题、日期和内容为必填项'; document.getElementById('edit-error').classList.remove('hidden'); return; }
   const url=editingId?`${API}/${editingId}`:API; const method=editingId?'PUT':'POST';
   try{
@@ -401,7 +419,27 @@ async function saveTimelineEvent(){
 async function deleteTimelineEvent(id){ if(!confirm('确认删除这个事件？'))return; try{ await fetch(`${TAPI}/${id}`,{method:'DELETE',headers:getHeaders()}); loadTimeline(); }catch(e){console.error(e)} }
 
 // Helpers
-function insertImage(url){ if(!url){ url=prompt('图片 URL:'); if(!url)return; } const alt=prompt('替代文字（可选）:')||''; const ta=document.getElementById('edit-content'); const tag=`<img src="${url}" alt="${alt}">`; const start=ta.selectionStart; ta.setRangeText(tag,start,ta.selectionEnd,'end'); ta.focus(); }
+function execCmd(cmd,val){
+  document.execCommand(cmd,false,val);
+  document.getElementById('edit-content').focus();
+}
+
+function insertLink(){
+  const url=prompt('链接 URL:');
+  if(!url)return;
+  const sel=window.getSelection();
+  if(sel.toString()){ execCmd('createLink',url); return; }
+  const text=prompt('链接文字:')||url;
+  document.execCommand('insertHTML',false,`<a href="${url}" target="_blank">${text}</a>`);
+  document.getElementById('edit-content').focus();
+}
+
+function insertImage(url){
+  if(!url){ url=prompt('图片 URL:'); if(!url)return; }
+  const div=document.getElementById('edit-content');
+  div.focus();
+  document.execCommand('insertHTML',false,`<img src="${url}" alt="">`);
+}
 let editImages=[];
 function renderEditImages(){ document.getElementById('edit-images').innerHTML=editImages.map((u,i)=>`<div class="link-row"><input type="text" value="${u}" placeholder="图片 URL" onchange="editImages[${i}]=this.value"><button class="btn-danger btn-sm" onclick="editImages.splice(${i},1);renderEditImages()">删除</button></div>`).join(''); }
 function addImage(){ editImages.push(''); renderEditImages(); }
