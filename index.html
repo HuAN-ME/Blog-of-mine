@@ -55,7 +55,7 @@
     background: rgba(255,255,255,0.06); backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     opacity: 0; filter: blur(4px); transform: translateY(30px);
-    transition: opacity 0.7s ease-out, filter 0.7s ease-out, transform 0.7s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out;
+    transition: opacity 0.4s ease-out, filter 0.4s ease-out, transform 0.4s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out;
     will-change: transform, opacity;
   }
   .post-card.visible { opacity: 1; filter: blur(0); transform: translateY(0); }
@@ -85,7 +85,7 @@
   .card-info {
     position: absolute; bottom: 0; left: 0; z-index: 3;
     background: rgba(0,0,0,0.65);
-    padding: 0.75rem 1rem; border-radius: 0 10px 0 0; max-width: 85%;
+    padding: 0.75rem 1rem; border-radius: 0 10px 0 0;
   }
   .card-info .title { font-size: 0.95rem; font-weight: 600; }
   .card-info .date { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
@@ -114,27 +114,27 @@
   .modal-close:hover { color: #fff; }
 
   /* Footer */
-  .site-footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
-  .footer-links { display: flex; gap: 1rem; margin-top: 0.5rem; }
+  .site-footer { display:flex; align-items:center; flex-wrap:wrap; gap:0.25rem 1rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
+  .footer-links { flex-basis:100%; display: flex; gap: 1rem; margin-top: 0.5rem; }
   .footer-links a { color: var(--accent); text-decoration: none; }
   .footer-links a:hover { text-decoration: underline; }
 
   /* Scroll reveal */
-.profile-card, .blog-header, .blog-clock, .site-footer {
-  opacity: 0; filter: blur(3px); transform: translateY(20px);
-  transition: opacity 0.6s ease-out, filter 0.6s ease-out, transform 0.6s ease-out;
-}
-.profile-card.visible, .blog-header.visible, .blog-clock.visible, .site-footer.visible {
-  opacity: 1; filter: blur(0); transform: translateY(0);
-}
+  .profile-card, .blog-header, .site-footer {
+    opacity: 0; filter: blur(3px); transform: translateY(20px);
+    transition: opacity 0.3s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+  }
+  .profile-card.visible, .blog-header.visible, .site-footer.visible {
+    opacity: 1; filter: blur(0); transform: translateY(0);
+  }
 
 /* Clock */
-.blog-clock { text-align:center; font-size:0.95rem; color:var(--muted); margin-bottom:1.5rem; font-variant-numeric:tabular-nums; letter-spacing:0.05em; }
+.blog-clock { font-size:0.9rem; color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:0.05em; font-weight:700; margin-left:auto; white-space:nowrap; }
 
 .hidden { display: none !important; }
 
   /* Login */
-  .login-btn { flex-shrink:0; margin-left:auto; width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--muted); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+  .login-btn { flex-shrink:0; margin-left:auto; padding:0.5rem 1.1rem; border-radius:8px; background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--muted); cursor:pointer; font-size:0.95rem; font-weight:600; transition:all 0.2s; }
   .login-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
 
   /* Timeline */
@@ -175,14 +175,13 @@
       <div id="profile-bio" class="bio"></div>
       <div id="profile-tags" class="tags"></div>
     </div>
-    <button class="login-btn" onclick="location.href='admin.html'" title="管理后台">&#x1f512;</button>
+    <button class="login-btn" onclick="location.href='admin.html'" title="管理后台">Login</button>
   </div>
 
   <div class="blog-header">
     <h1 id="site-title">我的博客</h1>
     <p id="site-subtitle">写点想写的东西。</p>
   </div>
-  <div class="blog-clock" id="blog-clock">--</div>
 
   <div id="post-grid" class="post-grid"></div>
 
@@ -197,6 +196,7 @@
   <div class="site-footer">
     <span id="footer-text">&copy; 2026 我的博客</span>
     <div id="footer-links" class="footer-links"></div>
+    <div class="blog-clock" id="blog-clock">--</div>
   </div>
 </div>
 
@@ -216,10 +216,10 @@ async function loadConfig() {
     const res = await fetch('/api/config');
     const cfg = await res.json();
     document.getElementById('site-title').textContent = cfg.title;
-    document.getElementById('site-subtitle').textContent = cfg.subtitle;
+    document.getElementById('site-subtitle').innerHTML = cfg.subtitle;
     document.getElementById('footer-text').textContent = cfg.footer;
     const linksEl = document.getElementById('footer-links');
-    linksEl.innerHTML = (cfg.links||[]).map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`).join('');
+    linksEl.innerHTML = (cfg.links||[]).map(l => { const safeUrl = /^(https?:)?\/\//.test(l.url) ? l.url : '#'; return `<a href="${safeUrl}" target="_blank" rel="noopener">${esc(l.label)}</a>`; }).join('');
     renderProfile(cfg.profile);
     loadBackground(cfg.background);
   } catch {}
@@ -230,9 +230,14 @@ function loadBackground(bg) {
   layer.innerHTML = '';
   if (!bg || !bg.url || !bg.type) return;
   if (bg.type === 'video') {
-    layer.innerHTML = `<video src="${bg.url}" autoplay muted loop playsinline></video>`;
+    const v = document.createElement('video');
+    v.src = bg.url; v.autoplay = true; v.muted = true; v.loop = true;
+    v.playsInline = true;
+    layer.appendChild(v);
   } else if (bg.type === 'image') {
-    layer.innerHTML = `<img src="${bg.url}">`;
+    const img = document.createElement('img');
+    img.src = bg.url;
+    layer.appendChild(img);
   }
 }
 
@@ -250,7 +255,7 @@ function renderProfile(p) {
   avatar.style.backgroundImage = p.avatar ? `url(${p.avatar})` : 'none';
   document.getElementById('profile-name').textContent = p.name||'';
   document.getElementById('profile-bio').textContent = p.bio||'';
-  document.getElementById('profile-tags').innerHTML = (p.tags||[]).map(t => `<span class="tag">${t}</span>`).join('');
+  document.getElementById('profile-tags').innerHTML = (p.tags||[]).map(t => `<span class="tag">${esc(t)}</span>`).join('');
 }
 
 async function loadPosts() {
@@ -357,7 +362,7 @@ function startAuto(pid) {
 function showPost(id) {
   const post = posts.find(p => p.id === id);
   if (!post) return;
-  document.getElementById('modal-body').innerHTML = `<h2>${post.title}</h2><div class="meta">${post.date}</div><div class="body">${post.content}</div>`;
+  document.getElementById('modal-body').innerHTML = `<h2>${esc(post.title)}</h2><div class="meta">${esc(post.date)}</div><div class="body">${post.content}</div>`;
   document.getElementById('modal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
@@ -396,8 +401,9 @@ loadPosts();
 loadTimeline();
 
 // Scroll reveal
+
 function initScrollReveal() {
-  const sel = '.post-card, .profile-card, .blog-header, .blog-clock, .site-footer';
+  const sel = '.post-card, .profile-card, .blog-header, .site-footer';
   const targets = document.querySelectorAll(sel);
   if (!targets.length) return;
   const obs = new IntersectionObserver((entries) => {
@@ -421,6 +427,9 @@ function updateClock() {
 }
 setInterval(updateClock, 1000);
 updateClock();
+
+// Scroll reveal
+initScrollReveal();
 </script>
 </body>
 </html>

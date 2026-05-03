@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const BASE = path.join(__dirname, '..', 'public', 'images');
+const BASE = path.join(__dirname, '..', 'images');
 
 const tasks = [
   { url: 'https://public.ysjf.com/mediastorm/material/material/%E8%B4%B9%E5%B0%94%E7%8F%AD%E5%85%8B%E6%96%AF-20-%E8%BF%9C%E6%99%AF-20250107.JPG', dest: 'bg/background.webp' },

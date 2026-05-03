@@ -57,6 +57,7 @@
   .editor-body { min-height:200px; padding:0.75rem; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.14); color:var(--text); line-height:1.6; outline:none; }
   .editor-body:focus { border-color:var(--accent); }
   .editor-body img { max-width:100%; height:auto; }
+  .editor-subtitle { min-height:2.5rem; font-size:0.95rem; padding:0.5rem 0.75rem; }
 </style>
 </head>
 <body>
@@ -113,7 +114,16 @@
 
   <div id="tab-profile" class="tab-panel">
     <div class="card">
-      <div class="form-group"><label>头像 URL</label><input type="text" id="pf-avatar" placeholder="https://example.com/avatar.jpg"><p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">请使用直接图片链接（以 .jpg/.png/.webp 结尾），而非网页地址。</p></div>
+      <div class="form-group"><label>头像</label>
+        <div style="display:flex;gap:0.75rem;align-items:center">
+          <div id="pf-avatar-preview" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.1);background-size:cover;background-position:center;flex-shrink:0"></div>
+          <div>
+            <input type="file" id="pf-avatar-file" accept="image/*" style="display:none" onchange="uploadAvatar()">
+            <button class="btn-primary btn-sm" onclick="document.getElementById('pf-avatar-file').click()">上传头像</button>
+            <span id="pf-avatar-name" style="color:var(--muted);font-size:0.8rem;margin-left:0.5rem"></span>
+          </div>
+        </div>
+      </div>
       <div class="form-group"><label>姓名</label><input type="text" id="pf-name" placeholder="你的名字或昵称"></div>
       <div class="form-group"><label>简介</label><input type="text" id="pf-bio" placeholder="一句话介绍自己"></div>
       <div class="form-group"><label>个性标签</label><div id="pf-tags"></div><button class="btn-primary btn-sm" onclick="addPfTag()" style="margin-top:0.5rem">+ 添加标签</button></div>
@@ -125,11 +135,25 @@
   <div id="tab-settings" class="tab-panel">
     <div class="card">
       <div class="form-group"><label>博客标题</label><input type="text" id="cfg-title"></div>
-      <div class="form-group"><label>副标题</label><input type="text" id="cfg-subtitle"></div>
+      <div class="form-group"><label>副标题</label>
+          <div class="editor-toolbar" style="margin-bottom:4px">
+            <button onclick="subExec('bold')"><b>B</b></button>
+            <button onclick="subExec('italic')"><i>I</i></button>
+            <button onclick="subExec('underline')"><u>U</u></button>
+          </div>
+          <div id="cfg-subtitle" class="editor-body editor-subtitle" contenteditable="true"></div>
+        </div>
       <div class="form-group"><label>页脚文字</label><input type="text" id="cfg-footer"></div>
       <div class="form-group"><label>社交链接</label><div id="cfg-links"></div><button class="btn-primary btn-sm" onclick="addLink()" style="margin-top:0.5rem">+ 添加链接</button></div>
-      <div class="form-group"><label>背景类型</label><select id="cfg-bg-type" style="width:auto"><option value="">无</option><option value="image">图片</option><option value="video">视频</option></select></div>
-      <div class="form-group"><label>背景 URL</label><input type="text" id="cfg-bg-url" placeholder="https://... 留空使用默认渐变"></div>
+      <div class="form-group"><label>背景类型</label><select id="cfg-bg-type" style="width:auto" onchange="updateBgFileAccept()"><option value="">无</option><option value="image">图片</option><option value="video">视频</option></select></div>
+      <div class="form-group"><label>背景文件</label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input type="file" id="cfg-bg-file" accept="image/*,video/*" style="display:none" onchange="uploadBgFile()">
+          <button class="btn-primary btn-sm" onclick="document.getElementById('cfg-bg-file').click()">选择文件</button>
+          <span id="cfg-bg-name" style="color:var(--muted);font-size:0.85rem"></span>
+        </div>
+        <div id="cfg-bg-preview" style="margin-top:0.5rem"></div>
+      </div>
       <div style="margin-top:1rem"><button class="btn-primary" onclick="saveConfig()">保存设置</button></div>
       <div id="cfg-msg" class="success hidden">设置已保存</div>
     </div>
@@ -242,7 +266,7 @@
 const API='/api/posts'; const TAPI='/api/timeline';
 let token=''; let editingId=null; let tlEditingId=null; let currentUser='';
 
-function getHeaders(){ return {'Authorization':'Bearer '+token,'Content-Type':'application/json'}; }
+function getHeaders(){ return {'Content-Type':'application/json'}; }
 
 function showLogin(msg){
   document.getElementById('app').classList.add('hidden');
@@ -261,17 +285,12 @@ function showApp(){
 }
 
 async function tryAutoLogin(){
-  const saved=localStorage.getItem('blog_token');
-  if(!saved){ showLogin(); return; }
-  token=saved;
   try{
-    const res=await fetch('/api/auth/me',{headers:getHeaders()});
-    if(res.ok){ showApp(); return; }
+    const res=await fetch('/api/auth/me',{credentials:'include'});
+    const d=await res.json();
+    if(res.ok){ currentUser=d.username; showApp(); return; }
   }catch(e){}
-  // Token invalid
-  localStorage.removeItem('blog_token');
-  token='';
-  showLogin('登录已过期，请重新登录');
+  showLogin();
 }
 
 async function doLogin(){
@@ -279,12 +298,11 @@ async function doLogin(){
   const p=document.getElementById('lg-pass').value;
   if(!u||!p){ showLogin('请输入账户和密码'); return; }
   try{
-    const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const res=await fetch('/api/auth/login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
     if(res.ok){
       const d=await res.json();
       token=d.token;
       currentUser=d.username;
-      localStorage.setItem('blog_token',token);
       showApp();
     }else{
       const d=await res.json().catch(()=>({}));
@@ -303,10 +321,9 @@ function cancelLogout(){
 
 async function doLogout(){
   document.getElementById('logout-modal').classList.add('hidden');
-  localStorage.removeItem('blog_token');
   token='';
   currentUser='';
-  try{ await fetch('/api/auth/logout',{method:'POST',headers:getHeaders()}); }catch(e){}
+  try{ await fetch('/api/auth/logout',{method:'POST',credentials:'include'}); }catch(e){}
   showLogin();
 }
 
@@ -345,13 +362,13 @@ async function savePost(){
   if(!title||!date||!content){ document.getElementById('edit-error').textContent='标题、日期和内容为必填项'; document.getElementById('edit-error').classList.remove('hidden'); return; }
   const url=editingId?`${API}/${editingId}`:API; const method=editingId?'PUT':'POST';
   try{
-    const res=await fetch(url,{method,headers:getHeaders(),body:JSON.stringify({title,date,excerpt,content,images:editImages.filter(u=>u.trim())})});
+    const res=await fetch(url,{method,credentials:'include',headers:getHeaders(),body:JSON.stringify({title,date,excerpt,content,images:editImages.filter(u=>u.trim())})});
     if(res.ok){ document.getElementById('edit-success').textContent=editingId?'文章已更新':'文章已创建'; document.getElementById('edit-success').classList.remove('hidden'); document.getElementById('edit-error').classList.add('hidden'); if(!editingId)hideEditor(); loadPosts(); }
     else{ const d=await res.json(); document.getElementById('edit-error').textContent=d.error||'保存失败'; document.getElementById('edit-error').classList.remove('hidden'); }
   }catch(e){console.error('Save post error:',e);document.getElementById('edit-error').textContent='网络错误';document.getElementById('edit-error').classList.remove('hidden');}
 }
 
-async function deletePost(id){ if(!confirm('确认删除这篇文章？'))return; try{ await fetch(`${API}/${id}`,{method:'DELETE',headers:getHeaders()}); loadPosts(); if(editingId===id)hideEditor(); }catch(e){console.error(e)} }
+async function deletePost(id){ if(!confirm('确认删除这篇文章？'))return; try{ await fetch(`${API}/${id}`,{method:'DELETE',credentials:'include',headers:getHeaders()}); loadPosts(); if(editingId===id)hideEditor(); }catch(e){console.error(e)} }
 
 function switchTab(name){
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
@@ -368,35 +385,111 @@ function addPfTag(){ pfTags.push(''); renderPfTags(pfTags); }
 async function loadProfileConfig(){
   try{
     const res=await fetch('/api/config'); const cfg=await res.json(); const p=cfg.profile||{};
-    document.getElementById('pf-avatar').value=p.avatar||''; document.getElementById('pf-name').value=p.name||'';
+    pfAvatarUrl=p.avatar||''; document.getElementById('pf-name').value=p.name||'';
     document.getElementById('pf-bio').value=p.bio||''; renderPfTags(p.tags||[]);
+    renderPfAvatarPreview();
   }catch(e){console.error(e)}
 }
 async function saveProfile(){
   try{
     const res=await fetch('/api/config'); const cfg=await res.json();
-    cfg.profile={ avatar:document.getElementById('pf-avatar').value.trim(), name:document.getElementById('pf-name').value.trim(), bio:document.getElementById('pf-bio').value.trim(), tags:pfTags.filter(t=>t.trim()) };
-    const ur=await fetch('/api/config',{method:'PUT',headers:getHeaders(),body:JSON.stringify(cfg)});
+    cfg.profile={ avatar:pfAvatarUrl, name:document.getElementById('pf-name').value.trim(), bio:document.getElementById('pf-bio').value.trim(), tags:pfTags.filter(t=>t.trim()) };
+    const ur=await fetch('/api/config',{method:'PUT',credentials:'include',headers:getHeaders(),body:JSON.stringify(cfg)});
     if(ur.ok)document.getElementById('pf-msg').classList.remove('hidden');
   }catch(e){console.error(e)}
+}
+
+// Profile helpers
+let pfAvatarUrl='';
+function renderPfAvatarPreview(){
+  const el=document.getElementById('pf-avatar-preview');
+  if(el) el.style.backgroundImage=pfAvatarUrl ? `url(${pfAvatarUrl})` : 'none';
+}
+async function uploadAvatar(){
+  const file=document.getElementById('pf-avatar-file').files[0];
+  if(!file)return;
+  const fd=new FormData(); fd.append('file',file);
+  try{
+    const res=await fetch('/api/upload-avatar',{method:'POST',credentials:'include',body:fd});
+    if(res.ok){
+      const d=await res.json();
+      pfAvatarUrl=d.url;
+      document.getElementById('pf-avatar-name').textContent=file.name;
+      renderPfAvatarPreview();
+    }else{
+      const err=await res.json().catch(()=>({}));
+      alert('上传失败: '+(err.error||res.status));
+    }
+  }catch(e){ alert('上传失败: 网络错误'); }
+  document.getElementById('pf-avatar-file').value='';
 }
 
 // Settings
 let cfgLinks=[];
 function renderCfgLinks(links){ cfgLinks=links; document.getElementById('cfg-links').innerHTML=links.map((l,i)=>`<div class="link-row"><input type="text" value="${l.label}" placeholder="名称" onchange="cfgLinks[${i}].label=this.value"><input type="text" value="${l.url}" placeholder="URL" onchange="cfgLinks[${i}].url=this.value"><button class="btn-danger btn-sm" onclick="cfgLinks.splice(${i},1);renderCfgLinks(cfgLinks)">删除</button></div>`).join(''); }
 function addLink(){ cfgLinks.push({label:'',url:''}); renderCfgLinks(cfgLinks); }
+
+// Site Config
+let cfgBgUrl = '';
 async function loadSiteConfig(){
   try{
     const res=await fetch('/api/config'); const cfg=await res.json();
-    document.getElementById('cfg-title').value=cfg.title; document.getElementById('cfg-subtitle').value=cfg.subtitle;
+    document.getElementById('cfg-title').value=cfg.title;
+    document.getElementById('cfg-subtitle').innerHTML=cfg.subtitle||'';
     document.getElementById('cfg-footer').value=cfg.footer; renderCfgLinks(cfg.links||[]);
     document.getElementById('cfg-bg-type').value=(cfg.background&&cfg.background.type)||'';
-    document.getElementById('cfg-bg-url').value=(cfg.background&&cfg.background.url)||'';
+    if(cfg.background&&cfg.background.url){
+      cfgBgUrl=cfg.background.url;
+      renderBgPreview(cfg.background.url);
+    }
   }catch(e){console.error(e)}
 }
 async function saveConfig(){
-  const body={ title:document.getElementById('cfg-title').value.trim(), subtitle:document.getElementById('cfg-subtitle').value.trim(), footer:document.getElementById('cfg-footer').value.trim(), links:cfgLinks.filter(l=>l.label&&l.url), background:{ type:document.getElementById('cfg-bg-type').value, url:document.getElementById('cfg-bg-url').value.trim() } };
-  try{ const res=await fetch('/api/config',{method:'PUT',headers:getHeaders(),body:JSON.stringify(body)}); if(res.ok)document.getElementById('cfg-msg').classList.remove('hidden'); }catch(e){console.error(e)}
+  const body={ title:document.getElementById('cfg-title').value.trim(), subtitle:document.getElementById('cfg-subtitle').innerHTML.trim(), footer:document.getElementById('cfg-footer').value.trim(), links:cfgLinks.filter(l=>l.label&&l.url), background:{ type:document.getElementById('cfg-bg-type').value, url:cfgBgUrl } };
+  try{ const res=await fetch('/api/config',{method:'PUT',credentials:'include',headers:getHeaders(),body:JSON.stringify(body)}); if(res.ok)document.getElementById('cfg-msg').classList.remove('hidden'); }catch(e){console.error(e)}
+}
+
+function subExec(cmd){
+  document.execCommand(cmd,false,null);
+  document.getElementById('cfg-subtitle').focus();
+}
+
+function updateBgFileAccept(){
+  const sel=document.getElementById('cfg-bg-type').value;
+  const inp=document.getElementById('cfg-bg-file');
+  if(sel==='image') inp.accept='image/*';
+  else if(sel==='video') inp.accept='video/*';
+  else inp.accept='image/*,video/*';
+}
+
+function renderBgPreview(url){
+  const el=document.getElementById('cfg-bg-preview');
+  if(!url){ el.innerHTML=''; return; }
+  const bgType=document.getElementById('cfg-bg-type').value;
+  if(bgType==='video'){
+    el.innerHTML='<video src="'+url+'" controls style="max-width:240px;max-height:135px;border-radius:6px"></video>';
+  }else{
+    el.innerHTML='<img src="'+url+'" style="max-width:240px;max-height:135px;border-radius:6px;object-fit:cover">';
+  }
+}
+
+async function uploadBgFile(){
+  const file=document.getElementById('cfg-bg-file').files[0];
+  if(!file)return;
+  const fd=new FormData(); fd.append('file',file);
+  try{
+    const res=await fetch('/api/upload-bg',{method:'POST',credentials:'include',body:fd});
+    if(res.ok){
+      const d=await res.json();
+      cfgBgUrl=d.url;
+      document.getElementById('cfg-bg-name').textContent=file.name;
+      renderBgPreview(d.url);
+    }else{
+      const err=await res.json().catch(()=>({}));
+      alert('上传失败: '+(err.error||res.status));
+    }
+  }catch(e){ alert('上传失败: 网络错误'); }
+  document.getElementById('cfg-bg-file').value='';
 }
 
 // Timeline
@@ -427,12 +520,12 @@ async function saveTimelineEvent(){
   if(!date||!title){ document.getElementById('tl-error').textContent='日期和标题为必填项'; document.getElementById('tl-error').classList.remove('hidden'); return; }
   const url=tlEditingId?`${TAPI}/${tlEditingId}`:TAPI; const method=tlEditingId?'PUT':'POST';
   try{
-    const res=await fetch(url,{method,headers:getHeaders(),body:JSON.stringify({date,title,description,icon})});
+    const res=await fetch(url,{method,credentials:'include',headers:getHeaders(),body:JSON.stringify({date,title,description,icon})});
     if(res.ok){ document.getElementById('tl-success').textContent=tlEditingId?'事件已更新':'事件已创建'; document.getElementById('tl-success').classList.remove('hidden'); document.getElementById('tl-error').classList.add('hidden'); if(!tlEditingId)hideTimelineEditor(); loadTimeline(); }
     else{ const d=await res.json(); document.getElementById('tl-error').textContent=d.error||'保存失败'; document.getElementById('tl-error').classList.remove('hidden'); }
   }catch(e){console.error('Save timeline error:',e);document.getElementById('tl-error').textContent='网络错误';document.getElementById('tl-error').classList.remove('hidden');}
 }
-async function deleteTimelineEvent(id){ if(!confirm('确认删除这个事件？'))return; try{ await fetch(`${TAPI}/${id}`,{method:'DELETE',headers:getHeaders()}); loadTimeline(); }catch(e){console.error(e)} }
+async function deleteTimelineEvent(id){ if(!confirm('确认删除这个事件？'))return; try{ await fetch(`${TAPI}/${id}`,{method:'DELETE',credentials:'include',headers:getHeaders()}); loadTimeline(); }catch(e){console.error(e)} }
 
 // Helpers
 function execCmd(cmd,val){
@@ -464,7 +557,7 @@ async function uploadAndInsert(){
   if(!file)return;
   const fd=new FormData(); fd.append('file',file);
   try{
-    const res=await fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+    const res=await fetch('/api/upload',{method:'POST',credentials:'include',body:fd});
     if(res.ok){ const d=await res.json(); insertImage(d.url); }
     else{ const err=await res.json().catch(()=>({})); alert('上传失败: '+(err.error||res.status)); }
   }catch(e){ console.error('Upload error:',e); alert('上传失败: 网络错误'); }
@@ -475,7 +568,7 @@ async function uploadGalleryImage(){
   if(!file)return;
   const fd=new FormData(); fd.append('file',file);
   try{
-    const res=await fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+    const res=await fetch('/api/upload',{method:'POST',credentials:'include',body:fd});
     if(res.ok){ const d=await res.json(); editImages.push(d.url); renderEditImages(); }
     else{ const err=await res.json().catch(()=>({})); alert('上传失败: '+(err.error||res.status)); }
   }catch(e){ console.error('Upload error:',e); alert('上传失败: 网络错误'); }
@@ -489,7 +582,7 @@ let accountEmail = null;
 
 async function loadAccountInfo(){
   try{
-    const res=await fetch('/api/auth/me',{headers:getHeaders()});
+    const res=await fetch('/api/auth/me',{credentials:'include',headers:getHeaders()});
     if(!res.ok)return;
     const d=await res.json();
     accountEmailVerified = d.email_verified;
@@ -543,7 +636,7 @@ async function loadAccountInfo(){
 
 async function sendPwCode(){
   try{
-    const res=await fetch('/api/auth/send-code',{method:'POST',headers:getHeaders()});
+    const res=await fetch('/api/auth/send-code',{method:'POST',credentials:'include',headers:getHeaders()});
     const d=await res.json();
     if(res.ok){
       const btn=document.getElementById('acc-pw-send-btn');
@@ -565,7 +658,7 @@ async function sendEmailCode(){
   const msg=document.getElementById('acc-email-msg');
   msg.classList.add('hidden');
   try{
-    const res=await fetch('/api/auth/send-code',{method:'POST',headers:getHeaders()});
+    const res=await fetch('/api/auth/send-code',{method:'POST',credentials:'include',headers:getHeaders()});
     const d=await res.json();
     if(res.ok){
       const btn=document.getElementById('acc-email-send-btn');
@@ -608,7 +701,7 @@ async function changePassword(){
     body.code=code;
   }
   try{
-    const res=await fetch('/api/auth/change-password',{method:'POST',headers:getHeaders(),body:JSON.stringify(body)});
+    const res=await fetch('/api/auth/change-password',{method:'POST',credentials:'include',headers:getHeaders(),body:JSON.stringify(body)});
     const d=await res.json();
     if(res.ok){
       msg.textContent='密码修改成功';msg.classList.remove('hidden');msg.style.color='var(--green)';
@@ -632,7 +725,7 @@ async function emailAction(){
       msg.textContent='请输入有效的邮箱地址';msg.classList.remove('hidden');msg.style.color='var(--red)';return;
     }
     try{
-      const res=await fetch('/api/auth/bind-email',{method:'POST',headers:getHeaders(),body:JSON.stringify({email})});
+      const res=await fetch('/api/auth/bind-email',{method:'POST',credentials:'include',headers:getHeaders(),body:JSON.stringify({email})});
       const d=await res.json();
       if(res.ok){
         msg.textContent=d.message||'验证码已发送';msg.classList.remove('hidden');msg.style.color='var(--green)';
@@ -653,7 +746,7 @@ async function emailAction(){
       msg.textContent='请输入6位验证码';msg.classList.remove('hidden');msg.style.color='var(--red)';return;
     }
     try{
-      const res=await fetch('/api/auth/verify-email',{method:'POST',headers:getHeaders(),body:JSON.stringify({code})});
+      const res=await fetch('/api/auth/verify-email',{method:'POST',credentials:'include',headers:getHeaders(),body:JSON.stringify({code})});
       const d=await res.json();
       if(res.ok){
         msg.textContent='邮箱绑定成功';msg.classList.remove('hidden');msg.style.color='var(--green)';
@@ -673,7 +766,7 @@ async function emailAction(){
   }
   hint.classList.add('hidden');
   try{
-    const res=await fetch('/api/auth/unbind-email',{method:'POST',headers:getHeaders(),body:JSON.stringify({code})});
+    const res=await fetch('/api/auth/unbind-email',{method:'POST',credentials:'include',headers:getHeaders(),body:JSON.stringify({code})});
     const d=await res.json();
     if(res.ok){
       msg.textContent='邮箱已解绑';msg.classList.remove('hidden');msg.style.color='var(--green)';
@@ -758,13 +851,12 @@ async function changeUsername(){
   msg.classList.add('hidden');
   if(!newUsername){msg.textContent='请输入新用户名';msg.classList.remove('hidden');msg.style.color='var(--red)';return;}
   try{
-    const res=await fetch('/api/auth/change-username',{method:'POST',headers:getHeaders(),body:JSON.stringify({newUsername})});
+    const res=await fetch('/api/auth/change-username',{method:'POST',credentials:'include',headers:getHeaders(),body:JSON.stringify({newUsername})});
     const d=await res.json();
     if(res.ok){
       msg.textContent='用户名已修改为: '+d.newUsername;msg.classList.remove('hidden');msg.style.color='var(--green)';
       document.getElementById('acc-username').value='';
       // Re-login required since token is invalidated
-      localStorage.removeItem('blog_token');
       setTimeout(()=>{showLogin('用户名已修改，请重新登录');},1500);
     }else{
       msg.textContent=d.error||'修改失败';msg.classList.remove('hidden');msg.style.color='var(--red)';
@@ -774,7 +866,7 @@ async function changeUsername(){
 
 function loadVisits(){
   const days=document.getElementById('visits-range').value;
-  fetch('/api/visits?days='+days,{headers:getHeaders()})
+  fetch('/api/visits?days='+days,{credentials:'include',headers:getHeaders()})
     .then(r=>r.json())
     .then(data=>{
       const canvas=document.getElementById('visits-canvas');
@@ -883,7 +975,7 @@ function initEditorPaste(){
         const file=item.getAsFile();
         try{
           const fd=new FormData();fd.append('file',file);
-          const res=await fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+          const res=await fetch('/api/upload',{method:'POST',credentials:'include',body:fd});
           if(res.ok){
             const d=await res.json();
             document.execCommand('insertHTML',false,'<img src="'+d.url+'" alt="">');

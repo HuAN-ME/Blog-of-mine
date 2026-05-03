@@ -4,3 +4,4 @@ terminals/
 images/posts/*
 !images/posts/.gitkeep
 _cursor-local-assistant/
+config.json
