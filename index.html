@@ -54,13 +54,15 @@
     position: relative; border-radius: 16px; overflow: hidden; cursor: pointer;
     background: rgba(255,255,255,0.06); backdrop-filter: blur(10px);
     border: 1px solid var(--border);
-    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out;
-    will-change: transform;
+    opacity: 0; filter: blur(4px); transform: translateY(30px);
+    transition: opacity 0.7s ease-out, filter 0.7s ease-out, transform 0.7s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out;
+    will-change: transform, opacity;
   }
+  .post-card.visible { opacity: 1; filter: blur(0); transform: translateY(0); }
   .post-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 0 30px rgba(96,165,250,0.2), 0 0 60px rgba(96,165,250,0.08), 0 12px 40px rgba(0,0,0,0.4);
-    border-color: rgba(96,165,250,0.4);
+    box-shadow: 0 0 30px rgba(255,255,255,0.12), 0 0 60px rgba(255,255,255,0.04), 0 12px 40px rgba(0,0,0,0.4);
+    border-color: rgba(255,255,255,0.2);
   }
   .post-card.no-carousel { display: flex; align-items: flex-end; }
   .post-card.no-carousel .card-info { position: static; border-radius: 0; padding: 1.5rem; width: 100%; }
@@ -117,10 +119,22 @@
   .footer-links a { color: var(--accent); text-decoration: none; }
   .footer-links a:hover { text-decoration: underline; }
 
-  .hidden { display: none !important; }
+  /* Scroll reveal */
+.profile-card, .blog-header, .blog-clock, .site-footer {
+  opacity: 0; filter: blur(3px); transform: translateY(20px);
+  transition: opacity 0.6s ease-out, filter 0.6s ease-out, transform 0.6s ease-out;
+}
+.profile-card.visible, .blog-header.visible, .blog-clock.visible, .site-footer.visible {
+  opacity: 1; filter: blur(0); transform: translateY(0);
+}
+
+/* Clock */
+.blog-clock { text-align:center; font-size:0.95rem; color:var(--muted); margin-bottom:1.5rem; font-variant-numeric:tabular-nums; letter-spacing:0.05em; }
+
+.hidden { display: none !important; }
 
   /* Login */
-  .login-btn { position: fixed; top: 1rem; right: 1rem; z-index: 50; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .login-btn { flex-shrink:0; margin-left:auto; width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--muted); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
   .login-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
 
   /* Timeline */
@@ -153,21 +167,22 @@
 <div class="bg-overlay"></div>
 
 <div class="container">
-  <button class="login-btn" onclick="location.href='admin.html'" title="管理后台">&#x1f512;</button>
 
-  <div id="profile-section" class="profile-card hidden">
+  <div id="profile-section" class="profile-card">
     <div id="profile-avatar" class="avatar"></div>
     <div class="info">
       <div id="profile-name" class="name"></div>
       <div id="profile-bio" class="bio"></div>
       <div id="profile-tags" class="tags"></div>
     </div>
+    <button class="login-btn" onclick="location.href='admin.html'" title="管理后台">&#x1f512;</button>
   </div>
 
   <div class="blog-header">
     <h1 id="site-title">我的博客</h1>
     <p id="site-subtitle">写点想写的东西。</p>
   </div>
+  <div class="blog-clock" id="blog-clock">--</div>
 
   <div id="post-grid" class="post-grid"></div>
 
@@ -223,9 +238,16 @@ function loadBackground(bg) {
 
 function renderProfile(p) {
   const sec = document.getElementById('profile-section');
-  if (!p || (!p.name && !p.bio && !(p.tags||[]).length)) { sec.classList.add('hidden'); return; }
-  sec.classList.remove('hidden');
-  document.getElementById('profile-avatar').style.backgroundImage = p.avatar ? `url(${p.avatar})` : 'none';
+  const avatar = document.getElementById('profile-avatar');
+  const info = document.querySelector('.profile-card .info');
+  if (!p || (!p.name && !p.bio && !(p.tags||[]).length)) {
+    avatar.style.display = 'none';
+    info.style.display = 'none';
+    return;
+  }
+  avatar.style.display = '';
+  info.style.display = '';
+  avatar.style.backgroundImage = p.avatar ? `url(${p.avatar})` : 'none';
   document.getElementById('profile-name').textContent = p.name||'';
   document.getElementById('profile-bio').textContent = p.bio||'';
   document.getElementById('profile-tags').innerHTML = (p.tags||[]).map(t => `<span class="tag">${t}</span>`).join('');
@@ -274,6 +296,7 @@ function renderGrid() {
     </div>`;
   }).join('');
   initCarousels();
+  initScrollReveal();
 }
 
 function initCarousels() {
@@ -371,6 +394,33 @@ async function loadTimeline(){
 loadConfig();
 loadPosts();
 loadTimeline();
+
+// Scroll reveal
+function initScrollReveal() {
+  const sel = '.post-card, .profile-card, .blog-header, .blog-clock, .site-footer';
+  const targets = document.querySelectorAll(sel);
+  if (!targets.length) return;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        en.target.classList.add('visible');
+        obs.unobserve(en.target);
+      }
+    });
+  }, { threshold: 0.05 });
+  targets.forEach(el => obs.observe(el));
+}
+
+// Live clock
+function updateClock() {
+  const now = new Date();
+  const s = now.toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  const el = document.getElementById('blog-clock');
+  if (el) el.textContent = s;
+}
+setInterval(updateClock, 1000);
+updateClock();
 </script>
 </body>
 </html>
