@@ -28,11 +28,14 @@
 
   /* Profile */
   .profile-card {
-    display: flex; gap: 1.25rem; align-items: center;
+    display: flex; gap: 1.25rem; align-items: center; cursor: pointer;
     background: rgba(255,255,255,0.07); backdrop-filter: blur(10px);
-    border: 1px solid var(--border); border-radius: 16px;
+    border-radius: 16px;
     padding: 1.5rem; margin-bottom: 2rem;
-    will-change: transform;
+  }
+  .profile-card:hover {
+    transform: translateY(-4px) translateZ(0);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
   }
   .profile-card .avatar { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.1); background-size: cover; background-position: center; flex-shrink: 0; }
   .profile-card .info { flex: 1; min-width: 0; }
@@ -47,30 +50,32 @@
   .blog-header p { color: var(--muted); font-size: 1rem; margin-top: 0.25rem; }
 
   /* Post Grid */
-  .post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+  .post-grid { columns: 340px; column-gap: 1.5rem; }
 
   /* Post Card */
   .post-card {
-    position: relative; border-radius: 16px; overflow: hidden; cursor: pointer;
+    display: flex; flex-direction: column;
+    border-radius: 16px; overflow: hidden; cursor: pointer;
     background: rgba(255,255,255,0.06); backdrop-filter: blur(10px);
-    border: 1px solid var(--border);
-    opacity: 0; filter: blur(4px); transform: translateY(30px);
-    transition: opacity 0.4s ease-out, filter 0.4s ease-out, transform 0.4s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out;
+    break-inside: avoid; margin-bottom: 1.5rem;
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0; filter: blur(4px); transform: translateY(30px) translateZ(0);
+    transition: opacity 0.4s ease-out, filter 0.4s ease-out, transform 0.4s ease-out, box-shadow 0.3s ease-out;
     will-change: transform, opacity;
+    backface-visibility: hidden;
   }
-  .post-card.visible { opacity: 1; filter: blur(0); transform: translateY(0); }
+  .post-card.visible { opacity: 1; filter: blur(0); transform: translateY(0) translateZ(0); }
   .post-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 0 30px rgba(255,255,255,0.12), 0 0 60px rgba(255,255,255,0.04), 0 12px 40px rgba(0,0,0,0.4);
-    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-4px) translateZ(0);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
   }
-  .post-card.no-carousel { display: flex; align-items: flex-end; }
-  .post-card.no-carousel .card-info { position: static; border-radius: 0; padding: 1.5rem; width: 100%; }
+  .post-card.no-carousel { background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); }
+  .post-card.no-carousel .card-info { padding: 1.5rem; }
 
   /* Carousel */
-  .carousel { position: relative; overflow: hidden; max-height: 500px; }
-  .carousel-track { display: flex; align-items: flex-start; transition: transform 0.25s ease-out; will-change: transform; }
-  .carousel-track img { width: 100%; height: auto; display: block; flex-shrink: 0; }
+  .carousel { position: relative; overflow: hidden; }
+  .carousel-track { display: flex; align-items: flex-start; height: 100%; transition: transform 0.25s ease-out; will-change: transform; }
+  .carousel-track img { width: 100%; height: 100%; object-fit: cover; display: block; flex-shrink: 0; }
   .carousel-arrow {
     position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
     background: rgba(0,0,0,0.45); border: none; color: #fff; cursor: pointer;
@@ -83,9 +88,7 @@
 
   /* Card info */
   .card-info {
-    position: absolute; bottom: 0; left: 0; z-index: 3;
-    background: rgba(0,0,0,0.65);
-    padding: 0.75rem 1rem; border-radius: 0 10px 0 0;
+    padding: 0.75rem 1rem;
   }
   .card-info .title { font-size: 0.95rem; font-weight: 600; }
   .card-info .date { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
@@ -98,7 +101,7 @@
   }
   .modal-box {
     background: rgba(20,20,30,0.92); backdrop-filter: blur(12px);
-    border: 1px solid var(--border); border-radius: 16px;
+    border-radius: 16px;
     max-width: 720px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 2rem;
     color: #e0e0e0;
   }
@@ -107,9 +110,66 @@
   .modal-box .body { font-size: 1rem; line-height: 1.8; }
   .modal-box .body p { margin-bottom: 0.8rem; }
   .modal-box .body img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
-  .modal-box .body pre { background: rgba(0,0,0,0.35); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.9rem; margin-bottom: 0.8rem; }
-  .modal-box .body code { background: rgba(0,0,0,0.35); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; }
-  .modal-box .body pre code { background: none; padding: 0; }
+  .modal-box .body pre {
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    padding: 2.25rem 1rem 1rem 1rem;
+    position: relative;
+  }
+  .modal-box .body pre[data-lang]::before {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1.75rem;
+    padding: 0 1rem;
+    display: flex; align-items: center;
+    font-size: 0.72rem;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+    color: rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px 10px 0 0;
+    letter-spacing: 0.02em;
+  }
+  .modal-box .body code {
+    background: rgba(0,0,0,0.35);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: "JetBrains Mono","Fira Code","Cascadia Code",Consolas,monospace;
+  }
+  .modal-box .body pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+
+  /* Comments */
+  .msg-list { display:flex; flex-direction:column; gap:0.75rem; margin-top:1.5rem; max-height:300px; overflow-y:auto; }
+  .msg-item { background:var(--glass); border-radius:12px; padding:0.75rem 1rem; transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
+  .msg-item:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .msg-item .msg-nick { font-size:0.85rem; font-weight:600; color:var(--accent); }
+  .msg-item .msg-content { font-size:0.9rem; margin-top:0.3rem; color:var(--text); line-height:1.5; }
+  .msg-item .msg-time { font-size:0.75rem; color:var(--muted); margin-top:0.3rem; }
+  .msg-empty { color:var(--muted); font-size:0.85rem; text-align:center; padding:1rem 0; }
+  .msg-form { margin-top:1.25rem; display:flex; flex-direction:column; gap:0.5rem; }
+  .msg-form input, .msg-form textarea { font-family:inherit; font-size:0.9rem; padding:0.5rem 0.75rem; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.08); color:var(--text); }
+  .msg-form input::placeholder, .msg-form textarea::placeholder { color:var(--muted); }
+  .msg-form textarea { min-height:60px; resize:vertical; line-height:1.5; }
+  .msg-form .msg-meta { display:flex; justify-content:space-between; align-items:center; }
+  .msg-form .msg-counter { font-size:0.75rem; color:var(--muted); }
+  .msg-form .msg-counter.over { color:#ef4444; }
+  .msg-form .btn-submit { padding:0.5rem 1.25rem; border-radius:8px; background:rgba(96,165,250,0.2); border:1px solid var(--accent); color:var(--accent); cursor:pointer; font-weight:600; font-size:0.9rem; transition:all 0.2s; align-self:flex-end; }
+  .msg-form .btn-submit:hover { background:rgba(96,165,250,0.35); }
+  .msg-form .btn-submit:disabled { opacity:0.4; cursor:default; }
+  .msg-error { color:#ef4444; font-size:0.8rem; }
+  .msg-ok { color:var(--green, #22c55e); font-size:0.85rem; text-align:center; margin-top:0.5rem; }
+
   .modal-close { float: right; background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; line-height: 1; }
   .modal-close:hover { color: #fff; }
 
@@ -120,22 +180,100 @@
   .footer-links a:hover { text-decoration: underline; }
 
   /* Scroll reveal */
-  .profile-card, .blog-header, .site-footer {
+  .blog-header, .site-footer {
     opacity: 0; filter: blur(3px); transform: translateY(20px);
     transition: opacity 0.3s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
   }
-  .profile-card.visible, .blog-header.visible, .site-footer.visible {
+  .profile-card {
+    opacity: 0; filter: blur(3px); transform: translateY(20px) translateZ(0);
+    transition: opacity 0.3s ease-out, filter 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.3s ease-out;
+  }
+  .blog-header.visible, .site-footer.visible {
     opacity: 1; filter: blur(0); transform: translateY(0);
   }
+  .profile-card.visible { opacity: 1; filter: blur(0); transform: translateY(0) translateZ(0); }
 
 /* Clock */
-.blog-clock { font-size:0.9rem; color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:0.05em; font-weight:700; margin-left:auto; white-space:nowrap; }
+.blog-clock { font-size:0.95rem; color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:0.05em; font-weight:700; white-space:nowrap; padding:0.5rem 1.1rem; border-radius:8px; background:rgba(255,255,255,0.08); }
 
 .hidden { display: none !important; }
 
   /* Login */
-  .login-btn { flex-shrink:0; margin-left:auto; padding:0.5rem 1.1rem; border-radius:8px; background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--muted); cursor:pointer; font-size:0.95rem; font-weight:600; transition:all 0.2s; }
+  .login-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .login-btn { padding:0.5rem 1.1rem; border-radius:8px; background:rgba(255,255,255,0.08); color:var(--muted); cursor:pointer; font-size:0.95rem; font-weight:600; transition:all 0.2s; border:none; }
   .login-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
+
+  /* Tag Cloud */
+  .tag-cloud {
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    margin-bottom: 1.5rem; margin-top: 1.5rem; padding: 0.75rem 1rem;
+    background: var(--glass); backdrop-filter: blur(10px);
+    border-radius: 12px;
+    max-height: 130px; overflow: hidden; position: relative;
+  }
+  .tag-cloud.has-overflow { padding-bottom: 2rem; }
+  .tag-cloud.has-overflow::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 2.5rem;
+    background: linear-gradient(transparent, rgba(13,13,13,0.9));
+    pointer-events: none; border-radius: 0 0 12px 12px;
+  }
+  .tag-cloud-label { color: var(--muted); font-size: 0.85rem; flex-shrink: 0; }
+  .tag-cloud-tag {
+    display: inline-block; padding: 0.2em 0.65em; border-radius: 999px; line-height: 1;
+    background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; user-select: none;
+    transition: all 0.2s; margin: 0.2rem 0.35rem;
+  }
+  .tag-cloud-tag:hover { border-color: var(--accent); color: #fff; }
+  .tag-cloud-tag.active, .tag-cloud-tag.selected {
+    background: rgba(96,165,250,0.2); border-color: var(--accent);
+    color: var(--accent); font-weight: 600;
+  }
+  .tag-cloud-confirm {
+    background: rgba(96,165,250,0.18); border: 1px solid rgba(96,165,250,0.3);
+    color: var(--accent); font-size: 0.75rem; cursor: pointer;
+    padding: 0.15rem 0.6rem; border-radius: 6px; flex-shrink: 0; transition: all 0.15s;
+  }
+  .tag-cloud-confirm:hover { background: rgba(96,165,250,0.3); }
+  .tag-cloud-clear {
+    background: none; border: none; color: var(--accent); font-size: 0.8rem;
+    cursor: pointer; margin-left: auto; flex-shrink: 0;
+  }
+  .tag-cloud-clear:hover { color: #fff; }
+
+  /* Tag All Modal */
+  .tag-all-layout { display: flex; gap: 0.75rem; max-height: 55vh; }
+  .tag-all-groups { flex: 1; overflow-y: auto; padding-right: 0.5rem; }
+  .tag-group { margin-bottom: 1.25rem; }
+  .tag-group-letter { font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
+  .tag-group-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .tag-all-tag {
+    display: inline-block; padding: 0.25em 0.75em; border-radius: 999px; line-height: 1;
+    background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; font-size: 0.85rem;
+    transition: all 0.2s; user-select: none;
+  }
+  .tag-all-tag:hover { border-color: var(--accent); color: #fff; }
+  .tag-all-tag.active {
+    background: rgba(96,165,250,0.2); border-color: var(--accent);
+    color: var(--accent); font-weight: 600;
+  }
+  .tag-index-bar {
+    display: flex; flex-direction: column; gap: 1px;
+    overflow-y: auto; max-height: 55vh;
+    padding-left: 0.25rem; flex-shrink: 0;
+  }
+  .tag-index-letter {
+    color: var(--accent); font-size: 0.7rem; cursor: pointer;
+    padding: 0.15em 0.25em; text-align: center; border-radius: 3px;
+    transition: all 0.15s; user-select: none; line-height: 1;
+  }
+  .tag-index-letter:hover { background: rgba(96,165,250,0.2); color: #fff; }
+
+  /* Card Tags */
+  .card-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+  .card-tag { font-size: 0.7rem; padding: 0.1em 0.45em; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid var(--border); color: var(--muted); line-height: 1; }
 
   /* Timeline */
   .timeline-section { margin-top: 3rem; }
@@ -148,7 +286,8 @@
   .tl-item:nth-child(odd) { flex-direction: row; padding-right: calc(50% + 2rem); }
   .tl-item:nth-child(even) { flex-direction: row-reverse; padding-left: calc(50% + 2rem); }
   .tl-dot { position: absolute; left: 50%; top: 14px; transform: translate(-50%,-50%); width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid rgba(0,0,0,0.4); z-index: 2; }
-  .tl-card { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; width: 100%; }
+  .tl-card { background: var(--glass); backdrop-filter: blur(10px); border-radius: 12px; padding: 1.25rem; width: 100%; transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
+  .tl-card:hover { transform: translateY(-4px) translateZ(0); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
   .tl-card .tl-icon { font-size: 1.25rem; margin-bottom: 0.4rem; }
   .tl-card .tl-date { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.3rem; }
   .tl-card .tl-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
@@ -159,6 +298,8 @@
     .tl-dot { left: 1rem; }
   }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
 
@@ -168,19 +309,27 @@
 
 <div class="container">
 
-  <div id="profile-section" class="profile-card">
+  <div class="login-bar"><div class="blog-clock" id="blog-clock">--</div><button class="login-btn" onclick="event.stopPropagation();location.href='admin.html'" title="管理后台">Login</button></div>
+
+  <div id="profile-section" class="profile-card" onclick="showBio()">
     <div id="profile-avatar" class="avatar"></div>
     <div class="info">
       <div id="profile-name" class="name"></div>
       <div id="profile-bio" class="bio"></div>
       <div id="profile-tags" class="tags"></div>
     </div>
-    <button class="login-btn" onclick="location.href='admin.html'" title="管理后台">Login</button>
   </div>
 
   <div class="blog-header">
     <h1 id="site-title">我的博客</h1>
     <p id="site-subtitle">写点想写的东西。</p>
+  </div>
+
+  <div id="tag-cloud" class="tag-cloud hidden">
+    <span class="tag-cloud-label">筛选：</span>
+    <span id="tag-cloud-tags"></span>
+    <button class="tag-cloud-confirm" onclick="applyTagCloudFilter()">确认</button>
+    <button class="tag-cloud-clear" onclick="clearTagCloudFilter()">全部</button>
   </div>
 
   <div id="post-grid" class="post-grid"></div>
@@ -196,7 +345,6 @@
   <div class="site-footer">
     <span id="footer-text">&copy; 2026 我的博客</span>
     <div id="footer-links" class="footer-links"></div>
-    <div class="blog-clock" id="blog-clock">--</div>
   </div>
 </div>
 
@@ -207,14 +355,39 @@
   </div>
 </div>
 
+<div id="bio-modal" class="modal-overlay hidden" onclick="closeBioModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeBioModal()">&times;</button>
+    <div id="bio-modal-body"></div>
+  </div>
+</div>
+
+<div id="tag-all-modal" class="modal-overlay hidden" onclick="closeTagAllModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeTagAllModal()">&times;</button>
+    <h2 style="margin-bottom:1rem">全部标签</h2>
+    <div class="tag-all-layout">
+      <div class="tag-all-groups" id="tag-all-groups"></div>
+      <div class="tag-index-bar" id="tag-index-bar"></div>
+    </div>
+    <div style="margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end">
+      <button class="btn-primary btn-sm" onclick="applyTagAllFilter()">确认筛选</button>
+      <button class="btn-ghost btn-sm" onclick="closeTagAllModal()">取消</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let posts = [];
 let carousels = {};
+let cfg = null;
+let activeTag = null;
+let selectedCloudTags = [];
 
 async function loadConfig() {
   try {
     const res = await fetch('/api/config');
-    const cfg = await res.json();
+    cfg = await res.json();
     document.getElementById('site-title').textContent = cfg.title;
     document.getElementById('site-subtitle').innerHTML = cfg.subtitle;
     document.getElementById('footer-text').textContent = cfg.footer;
@@ -267,6 +440,7 @@ async function loadPosts() {
       [posts[i], posts[j]] = [posts[j], posts[i]];
     }
     renderGrid();
+    buildTagCloud();
   } catch {
     document.getElementById('post-grid').innerHTML = '<p style="color:var(--muted)">加载失败</p>';
   }
@@ -280,11 +454,13 @@ function getPostImages(p) {
   return m.map(t => { const s = t.match(/src="([^"]+)"/i); return s ? s[1] : ''; }).filter(Boolean);
 }
 
-function renderGrid() {
+function renderGrid(postsToRender) {
+  const list = postsToRender || posts;
   const grid = document.getElementById('post-grid');
-  if (!posts.length) { grid.innerHTML = '<p style="color:var(--muted)">还没有文章。</p>'; return; }
-  grid.innerHTML = posts.map(p => {
+  if (!list.length) { grid.innerHTML = '<p style="color:var(--muted)">还没有文章。</p>'; return; }
+  grid.innerHTML = list.map(p => {
     const imgs = getPostImages(p);
+    const tagsHtml = (p.tags||[]).length ? `<div class="card-tags">${p.tags.map(t => `<span class="card-tag">${esc(t)}</span>`).join('')}</div>` : '';
     if (imgs.length) {
       const pid = 'c' + p.id;
       return `<div class="post-card" onclick="showPost(${p.id})">
@@ -293,11 +469,11 @@ function renderGrid() {
           <button class="carousel-arrow prev" onclick="event.stopPropagation();prevSlide('${pid}')">&#8249;</button>
           <button class="carousel-arrow next" onclick="event.stopPropagation();nextSlide('${pid}')">&#8250;</button>
         </div>
-        <div class="card-info"><div class="title">${esc(p.title)}</div><div class="date">${p.date}</div></div>
+        <div class="card-info"><div class="title">${esc(p.title)}</div><div class="date">${p.date}</div>${tagsHtml}</div>
       </div>`;
     }
     return `<div class="post-card no-carousel" onclick="showPost(${p.id})">
-      <div class="card-info"><div class="title">${esc(p.title)}</div><div class="date">${p.date}</div></div>
+      <div class="card-info"><div class="title">${esc(p.title)}</div><div class="date">${p.date}</div>${tagsHtml}</div>
     </div>`;
   }).join('');
   initCarousels();
@@ -305,11 +481,19 @@ function renderGrid() {
 }
 
 function initCarousels() {
+  Object.values(carousels).forEach(c => { if (c.timer) clearInterval(c.timer); });
+  carousels = {};
   posts.forEach(p => {
     const imgs = getPostImages(p);
     if (!imgs.length) return;
     const pid = 'c' + p.id;
     carousels[pid] = { idx: 0, len: imgs.length, timer: null };
+    const el = document.getElementById(pid);
+    if (el) {
+      const first = el.querySelector('img');
+      const setRatio = () => { el.style.aspectRatio = (first.naturalWidth / first.naturalHeight) || (4/3); };
+      if (first.complete) setRatio(); else first.onload = setRatio;
+    }
     syncCarouselWidth(pid);
     startAuto(pid);
   });
@@ -362,15 +546,149 @@ function startAuto(pid) {
 function showPost(id) {
   const post = posts.find(p => p.id === id);
   if (!post) return;
-  document.getElementById('modal-body').innerHTML = `<h2>${esc(post.title)}</h2><div class="meta">${esc(post.date)}</div><div class="body">${post.content}</div>`;
+  document.getElementById('modal-body').innerHTML = `<h2>${esc(post.title)}</h2><div class="meta">${esc(post.date)}</div><div class="body">${post.content}</div>
+    <div class="post-comments" id="post-comments">
+      <div class="msg-list" id="post-msg-list"><p class="msg-empty">加载留言中...</p></div>
+      <div class="msg-form">
+        <input type="text" id="post-msg-nick" placeholder="你的昵称（可选）" maxlength="20">
+        <textarea id="post-msg-content" placeholder="写下你的留言（最多50字）" maxlength="50" oninput="updatePostMsgCounter()"></textarea>
+        <div class="msg-meta"><span class="msg-counter" id="post-msg-counter">0/50</span><button class="btn-submit" onclick="submitPostComment(${post.id})">提交留言</button></div>
+        <div class="msg-error hidden" id="post-msg-error"></div>
+        <div class="msg-ok hidden" id="post-msg-ok"></div>
+      </div>
+    </div>`;
+  requestAnimationFrame(() => {
+    document.querySelectorAll('#modal-body pre code').forEach(el => hljs.highlightElement(el));
+  });
   document.getElementById('modal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  loadPostComments(post.id);
 }
 
 function closeModal(e) {
   if (e && e.target !== document.getElementById('modal')) return;
   document.getElementById('modal').classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+// Bio modal
+function showBio() {
+  const body = document.getElementById('bio-modal-body');
+  const p = cfg && cfg.profile ? cfg.profile : {};
+
+  // Bio section
+  let html = '';
+  if (p.bio) {
+    html += '<div class="body" style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)">';
+    html += '<h2 style="margin-bottom:0.5rem">关于 ' + esc(p.name||'博主') + '</h2>';
+    html += '<p style="line-height:1.8;color:var(--text)">' + esc(p.bio) + '</p>';
+    html += '</div>';
+  } else {
+    html += '<h2 style="margin-bottom:1rem">关于博主</h2>';
+  }
+
+  // Messages list
+  html += '<div class="msg-list" id="msg-list">';
+  html += '<p class="msg-empty">加载中...</p>';
+  html += '</div>';
+
+  // Message form
+  html += '<div class="msg-form">';
+  html += '<input type="text" id="msg-nick" placeholder="你的昵称（可选）" maxlength="20">';
+  html += '<textarea id="msg-content" placeholder="写下你的留言（最多50字）" maxlength="50" oninput="updateMsgCounter()"></textarea>';
+  html += '<div class="msg-meta"><span class="msg-counter" id="msg-counter">0/50</span><button class="btn-submit" onclick="submitMessage()">提交留言</button></div>';
+  html += '<div class="msg-error hidden" id="msg-error"></div>';
+  html += '<div class="msg-ok hidden" id="msg-ok"></div>';
+  html += '</div>';
+
+  body.innerHTML = html;
+  document.getElementById('bio-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Load approved messages
+  loadMessages();
+}
+
+function closeBioModal(e) {
+  if (e && e.target !== document.getElementById('bio-modal')) return;
+  document.getElementById('bio-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function updateMsgCounter() {
+  const ta = document.getElementById('msg-content');
+  const counter = document.getElementById('msg-counter');
+  if (!ta || !counter) return;
+  const len = ta.value.length;
+  counter.textContent = len + '/50';
+  counter.classList.toggle('over', len > 50);
+}
+
+async function loadMessages() {
+  const list = document.getElementById('msg-list');
+  if (!list) return;
+  try {
+    const res = await fetch('/api/messages');
+    const msgs = await res.json();
+    if (!msgs.length) {
+      list.innerHTML = '<p class="msg-empty">暂无留言，来抢个沙发吧</p>';
+      return;
+    }
+    list.innerHTML = msgs.map(m => {
+      const t = new Date(m.time);
+      const ts = t.toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return '<div class="msg-item">'
+        + '<div class="msg-nick">' + esc(m.nickname || '匿名') + '</div>'
+        + '<div class="msg-content">' + esc(m.content) + '</div>'
+        + '<div class="msg-time">' + ts + '</div>'
+        + '</div>';
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<p class="msg-empty">留言加载失败</p>';
+  }
+}
+
+async function submitMessage() {
+  const nick = document.getElementById('msg-nick').value.trim() || '匿名';
+  const content = document.getElementById('msg-content').value.trim();
+  const err = document.getElementById('msg-error');
+  const ok = document.getElementById('msg-ok');
+  err.classList.add('hidden');
+  ok.classList.add('hidden');
+
+  if (!content) {
+    err.textContent = '请输入留言内容';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (content.length > 50) {
+    err.textContent = '留言不能超过50个字';
+    err.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname: nick, content })
+    });
+    const d = await res.json();
+    if (res.ok) {
+      ok.textContent = d.message || '留言已提交';
+      ok.classList.remove('hidden');
+      document.getElementById('msg-content').value = '';
+      document.getElementById('msg-nick').value = '';
+      updateMsgCounter();
+      loadMessages();
+    } else {
+      err.textContent = d.error || '提交失败';
+      err.classList.remove('hidden');
+    }
+  } catch (e) {
+    err.textContent = '网络错误，请稍后重试';
+    err.classList.remove('hidden');
+  }
 }
 
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -415,6 +733,164 @@ function initScrollReveal() {
     });
   }, { threshold: 0.05 });
   targets.forEach(el => obs.observe(el));
+}
+
+// Tag Cloud
+function buildTagCloud() {
+  const cloud = document.getElementById('tag-cloud');
+  const container = document.getElementById('tag-cloud-tags');
+  if (!cloud || !container) return;
+  const freq = {};
+  posts.forEach(p => (p.tags||[]).forEach(t => { freq[t] = (freq[t]||0) + 1; }));
+  const collator = new Intl.Collator('zh-Hans', { sensitivity: 'base' });
+  const entries = Object.entries(freq).sort((a,b) => collator.compare(a[0], b[0]));
+  if (!entries.length) { cloud.classList.add('hidden'); return; }
+  cloud.classList.remove('hidden');
+  container.innerHTML = entries.map(([tag]) => {
+    const sel = selectedCloudTags.includes(tag);
+    return `<span class="tag-cloud-tag${sel ? ' selected' : ''}" onclick="toggleCloudTag('${esc(tag)}')">${esc(tag)}</span>`;
+  }).join('');
+  requestAnimationFrame(() => {
+    const overflows = cloud.scrollHeight > cloud.clientHeight + 5;
+    cloud.classList.toggle('has-overflow', overflows);
+  });
+}
+
+function toggleCloudTag(tag) {
+  const idx = selectedCloudTags.indexOf(tag);
+  if (idx > -1) selectedCloudTags.splice(idx, 1);
+  else selectedCloudTags.push(tag);
+  buildTagCloud();
+}
+
+function applyTagCloudFilter() {
+  if (!selectedCloudTags.length) { clearTagCloudFilter(); return; }
+  activeTag = selectedCloudTags[0]; // 兼容性保留
+  const filtered = posts.filter(p => selectedCloudTags.every(t => (p.tags||[]).includes(t)));
+  renderGrid(filtered);
+  buildTagCloud();
+}
+
+function clearTagCloudFilter() {
+  selectedCloudTags = [];
+  activeTag = null;
+  renderGrid(posts);
+  buildTagCloud();
+}
+
+// Tag-All Modal
+function showAllTags() {
+  const freq = {};
+  posts.forEach(p => (p.tags||[]).forEach(t => { freq[t] = (freq[t]||0) + 1; }));
+  const allTags = [...new Set(Object.keys(freq))];
+
+  // Group by first letter
+  const groups = {};
+  allTags.forEach(tag => {
+    const ch = tag.charAt(0).toUpperCase();
+    const key = /[A-Z]/.test(ch) ? ch : '#';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(tag);
+  });
+
+  // Sort groups: A-Z first, then #
+  const letters = Object.keys(groups).filter(k => k !== '#').sort();
+  if (groups['#']) letters.push('#');
+
+  // Render groups
+  const groupsEl = document.getElementById('tag-all-groups');
+  groupsEl.innerHTML = letters.map(letter => {
+    const tags = groups[letter].sort((a,b) => a.localeCompare(b, 'zh-Hans-CN'));
+    return `<div class="tag-group" id="tag-group-${letter}">
+      <div class="tag-group-letter">${letter}</div>
+      <div class="tag-group-tags">${tags.map(t => {
+        const cls = selectedCloudTags.includes(t) ? 'tag-all-tag active' : 'tag-all-tag';
+        return `<span class="${cls}" onclick="toggleCloudTag('${esc(t)}');showAllTags()">${esc(t)}</span>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('');
+
+  // Render index bar
+  const indexEl = document.getElementById('tag-index-bar');
+  indexEl.innerHTML = letters.map(l => `<span class="tag-index-letter" onclick="scrollToTagGroup('${l}')">${l}</span>`).join('');
+
+  document.getElementById('tag-all-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function scrollToTagGroup(letter) {
+  const el = document.getElementById('tag-group-' + letter);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function applyTagAllFilter() {
+  closeTagAllModal();
+  if (!selectedCloudTags.length) { clearTagCloudFilter(); return; }
+  activeTag = selectedCloudTags[0];
+  const filtered = posts.filter(p => selectedCloudTags.every(t => (p.tags||[]).includes(t)));
+  renderGrid(filtered);
+  buildTagCloud();
+}
+
+function closeTagAllModal(e) {
+  if (e && e.target !== document.getElementById('tag-all-modal')) return;
+  document.getElementById('tag-all-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+// Article comments
+function updatePostMsgCounter() {
+  const ta = document.getElementById('post-msg-content');
+  const counter = document.getElementById('post-msg-counter');
+  if (!ta || !counter) return;
+  const len = ta.value.length;
+  counter.textContent = len + '/50';
+  counter.classList.toggle('over', len > 50);
+}
+
+async function loadPostComments(postId) {
+  const list = document.getElementById('post-msg-list');
+  if (!list) return;
+  try {
+    const res = await fetch('/api/messages?postId=' + postId);
+    const msgs = await res.json();
+    if (!msgs.length) { list.innerHTML = '<p class="msg-empty">暂无留言，来抢个沙发吧</p>'; return; }
+    list.innerHTML = msgs.map(m => {
+      const t = new Date(m.time);
+      const ts = t.toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return '<div class="msg-item">'
+        + '<div class="msg-nick">' + esc(m.nickname || '匿名') + '</div>'
+        + '<div class="msg-content">' + esc(m.content) + '</div>'
+        + '<div class="msg-time">' + ts + '</div>'
+        + '</div>';
+    }).join('');
+  } catch(e) { list.innerHTML = '<p class="msg-empty">留言加载失败</p>'; }
+}
+
+async function submitPostComment(postId) {
+  const nick = document.getElementById('post-msg-nick').value.trim() || '匿名';
+  const content = document.getElementById('post-msg-content').value.trim();
+  const err = document.getElementById('post-msg-error');
+  const ok = document.getElementById('post-msg-ok');
+  err.classList.add('hidden'); ok.classList.add('hidden');
+  if (!content) { err.textContent = '请输入留言内容'; err.classList.remove('hidden'); return; }
+  if (content.length > 50) { err.textContent = '留言不能超过50个字'; err.classList.remove('hidden'); return; }
+  try {
+    const res = await fetch('/api/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ nickname:nick, content, context:'article', postId })
+    });
+    const d = await res.json();
+    if (res.ok) {
+      ok.textContent = d.message || '留言已提交'; ok.classList.remove('hidden');
+      document.getElementById('post-msg-content').value = '';
+      document.getElementById('post-msg-nick').value = '';
+      updatePostMsgCounter();
+      loadPostComments(postId);
+    } else {
+      err.textContent = d.error || '提交失败'; err.classList.remove('hidden');
+    }
+  } catch(e) { err.textContent = '网络错误，请稍后重试'; err.classList.remove('hidden'); }
 }
 
 // Live clock

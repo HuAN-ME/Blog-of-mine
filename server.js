@@ -20,7 +20,9 @@ const POST_SANITIZE = {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'span', 'u', 's', 'pre', 'code']),
   allowedAttributes: {
     a: ['href', 'target', 'rel'],
-    img: ['src', 'alt', 'width', 'height', 'loading']
+    img: ['src', 'alt', 'width', 'height', 'loading'],
+    code: ['class'],
+    pre: ['class', 'data-lang']
   },
   allowedSchemes: ['http', 'https', 'mailto'],
   transformTags: {
@@ -57,6 +59,7 @@ const POSTS_DIR = path.join(__dirname, 'posts');
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 const TIMELINE_PATH = path.join(__dirname, 'timeline.json');
 const VISITS_FILE = path.join(__dirname, 'visits.json');
+const MESSAGES_FILE = path.join(__dirname, 'messages.json');
 
 // Visits tracking
 let visits = {};
@@ -135,6 +138,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:"],
       mediaSrc: ["'self'"],
@@ -157,6 +161,14 @@ const codeVerifyLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const messageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: '留言过于频繁，请15分钟后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(express.json({ limit: '200kb' }));
 
 // Visit tracking middleware
@@ -172,7 +184,7 @@ app.use((req, res, next) => {
 // Block static access to sensitive files
 const STATIC_BLOCKED = new Set([
   '.env', 'server.js', 'package.json', 'package-lock.json',
-  'users.json', 'config.json', 'timeline.json', 'visits.json',
+  'users.json', 'config.json', 'timeline.json', 'visits.json', 'messages.json',
   'query', 'node_modules', '.git', '.gitignore',
   'posts', 'scripts'
 ]);
@@ -729,13 +741,14 @@ app.get('/api/posts/:id', (req, res) => {
 });
 
 app.post('/api/posts', checkAdmin, (req, res) => {
-  const { title, date, excerpt, content, images } = req.body;
+  const { title, date, excerpt, content, images, tags } = req.body;
   if (!title || !date || !content) {
     return res.status(400).json({ error: '标题、日期和内容为必填项' });
   }
   const posts = readPosts();
   const id = posts.length > 0 ? Math.max(...posts.map(p => p.id)) + 1 : 1;
-  const post = { id, title, date, excerpt: excerpt || '', content: sanitizeHtml(content, POST_SANITIZE), images: images || [] };
+  const cleanTags = (tags || []).filter(t => t && t.trim()).slice(0, 4).map(t => t.trim());
+  const post = { id, title, date, excerpt: excerpt || '', content: sanitizeHtml(content, POST_SANITIZE), images: images || [], tags: cleanTags };
   writePost(post);
   res.status(201).json(post);
 });
@@ -745,14 +758,18 @@ app.put('/api/posts/:id', checkAdmin, (req, res) => {
   const filePath = path.join(POSTS_DIR, `${req.params.id}.json`);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: '文章不存在' });
   const existing = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  const { title, date, excerpt, content, images } = req.body;
+  const { title, date, excerpt, content, images, tags } = req.body;
+  const cleanTags = tags !== undefined
+    ? (tags || []).filter(t => t && t.trim()).slice(0, 4).map(t => t.trim())
+    : (existing.tags || []);
   const updated = {
     id: existing.id,
     title: title || existing.title,
     date: date || existing.date,
     excerpt: excerpt !== undefined ? excerpt : existing.excerpt,
     content: content ? sanitizeHtml(content, POST_SANITIZE) : existing.content,
-    images: images !== undefined ? images : (existing.images || [])
+    images: images !== undefined ? images : (existing.images || []),
+    tags: cleanTags
   };
   writePost(updated);
   res.json(updated);
@@ -852,6 +869,90 @@ app.delete('/api/timeline/:id', checkAdmin, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: '事件不存在' });
   data.events.splice(idx, 1);
   writeTimeline(data);
+  res.json({ ok: true });
+});
+
+// ── Messages helpers ──
+
+function readMessages() {
+  if (!fs.existsSync(MESSAGES_FILE)) {
+    fs.writeFileSync(MESSAGES_FILE, '[]', 'utf8');
+    return [];
+  }
+  return JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+}
+
+function writeMessages(msgs) {
+  fs.writeFileSync(MESSAGES_FILE, JSON.stringify(msgs, null, 2), 'utf8');
+}
+
+// ── Messages APIs ──
+
+// Public: submit a message
+app.post('/api/messages', messageLimiter, (req, res) => {
+  const { nickname, content, context, postId } = req.body;
+  if (!nickname || !nickname.trim() || nickname.length > 20) {
+    return res.status(400).json({ error: '昵称需1-20个字符' });
+  }
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: '留言内容不能为空' });
+  }
+  const trimmed = content.trim().slice(0, 50);
+  const msg = {
+    id: Date.now(),
+    nickname: nickname.trim().slice(0, 20),
+    content: trimmed,
+    time: new Date().toISOString(),
+    approved: false,
+    context: context === 'article' ? 'article' : 'profile',
+    postId: context === 'article' && Number.isInteger(postId) ? postId : null
+  };
+  const msgs = readMessages();
+  msgs.push(msg);
+  writeMessages(msgs);
+  res.status(201).json({ message: '留言已提交，待审核后显示' });
+});
+
+// Public: get approved messages
+app.get('/api/messages', (req, res) => {
+  const msgs = readMessages();
+  let approved = msgs.filter(m => m.approved);
+  if (req.query.postId) {
+    const pid = parseInt(req.query.postId);
+    if (!isNaN(pid)) approved = approved.filter(m => m.context === 'article' && m.postId === pid);
+  } else {
+    approved = approved.filter(m => m.context !== 'article');
+  }
+  approved.sort((a, b) => b.id - a.id);
+  res.json(approved.slice(0, 50));
+});
+
+// Admin: get all messages
+app.get('/api/admin/messages', checkAdmin, (_req, res) => {
+  const msgs = readMessages();
+  msgs.sort((a, b) => b.id - a.id);
+  res.json(msgs);
+});
+
+// Admin: update message (approve/reject)
+app.put('/api/admin/messages/:id', checkAdmin, (req, res) => {
+  const msgs = readMessages();
+  const idx = msgs.findIndex(m => m.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: '留言不存在' });
+  if (req.body.approved !== undefined) {
+    msgs[idx].approved = !!req.body.approved;
+  }
+  writeMessages(msgs);
+  res.json(msgs[idx]);
+});
+
+// Admin: delete message
+app.delete('/api/admin/messages/:id', checkAdmin, (req, res) => {
+  const msgs = readMessages();
+  const idx = msgs.findIndex(m => m.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: '留言不存在' });
+  msgs.splice(idx, 1);
+  writeMessages(msgs);
   res.json({ ok: true });
 });
 

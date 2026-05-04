@@ -58,6 +58,23 @@
   .editor-body:focus { border-color:var(--accent); }
   .editor-body img { max-width:100%; height:auto; }
   .editor-subtitle { min-height:2.5rem; font-size:0.95rem; padding:0.5rem 0.75rem; }
+  .code-input-section { margin-top:0.5rem; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .code-input-bar { display:flex; gap:0.5rem; padding:0.5rem; background:rgba(255,255,255,0.04); border-bottom:1px solid var(--border); align-items:center; }
+  .code-lang-select { width:auto; min-width:140px; padding:0.35rem 0.6rem; font-size:0.8rem; background:rgba(255,255,255,0.12); border:1px solid var(--border); border-radius:6px; color:var(--text); }
+  .btn-code-embed { padding:0.35rem 0.75rem; font-size:0.8rem; background:rgba(96,165,250,0.18); color:var(--accent); border:1px solid rgba(96,165,250,0.25); border-radius:6px; cursor:pointer; white-space:nowrap; }
+  .btn-code-embed:hover { background:rgba(96,165,250,0.28); opacity:1; }
+  .code-textarea { min-height:120px; padding:0.75rem; border:none; border-radius:0; background:rgba(0,0,0,0.25); color:var(--text); font-family:"JetBrains Mono","Fira Code","Cascadia Code",Consolas,monospace; font-size:0.85rem; line-height:1.55; resize:vertical; width:100%; }
+  .code-textarea:focus { outline:none; box-shadow:0 0 0 1px var(--accent); }
+  .editor-body pre { background:rgba(0,0,0,0.4); border-radius:8px; padding:0.75rem; overflow-x:auto; font-size:0.85rem; margin:0.5rem 0; border:1px solid var(--border); white-space:pre-wrap; }
+  .editor-body pre code { font-family:"JetBrains Mono","Fira Code","Cascadia Code",Consolas,monospace; font-size:0.85rem; }
+  .existing-tags { display:flex; gap:0.35rem; flex-wrap:wrap; }
+  .tag-chip { padding:0.2rem 0.5rem; font-size:0.75rem; background:rgba(96,165,250,0.1); border:1px solid rgba(96,165,250,0.2); border-radius:12px; color:var(--accent); cursor:pointer; white-space:nowrap; transition:background 0.15s; }
+  .tag-chip:hover { background:rgba(96,165,250,0.22); }
+  .tag-filter-bar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; flex-wrap:wrap; }
+  .tag-filter-label { color:var(--muted); font-size:0.8rem; flex-shrink:0; }
+  .tag-filter-pill { display:inline-block; padding:0.15rem 0.5rem; font-size:0.75rem; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .tag-filter-pill:hover { border-color:var(--accent); color:#fff; }
+  .tag-filter-pill.selected { background:rgba(96,165,250,0.18); border-color:var(--accent); color:var(--accent); font-weight:600; }
 </style>
 </head>
 <body>
@@ -105,9 +122,16 @@
     <button onclick="switchTab('timeline')">时间轴管理</button>
     <button onclick="switchTab('account')">账户安全</button>
     <button onclick="switchTab('visits')">访问统计</button>
+    <button onclick="switchTab('messages')">留言管理</button>
   </div>
 
   <div id="tab-posts" class="tab-panel active">
+    <div id="tag-filter-bar" class="tag-filter-bar hidden">
+      <span class="tag-filter-label">筛选：</span>
+      <span id="tag-filter-pills"></span>
+      <button class="btn-primary btn-sm" onclick="applyTagFilter()">确认</button>
+      <button class="btn-ghost btn-sm" onclick="clearTagFilter()">清除</button>
+    </div>
     <div id="post-list-container" class="card"></div>
     <div style="margin-top:1rem"><button class="btn-primary" onclick="showEditor()">+ 新建文章</button></div>
   </div>
@@ -212,6 +236,16 @@
     </div>
   </div>
 
+  <div id="tab-messages" class="tab-panel">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h2 style="font-size:1.1rem;margin:0">留言管理</h2>
+        <span id="msg-count" style="color:var(--muted);font-size:0.85rem"></span>
+      </div>
+      <div id="msg-list-admin"></div>
+    </div>
+  </div>
+
   <div id="editor" class="hidden">
     <div class="divider"></div>
     <h2 id="editor-title">新建文章</h2>
@@ -230,9 +264,27 @@
         <button onclick="document.getElementById('img-file-input').click()">上传图片</button>
       </div>
       <div class="editor-body" id="edit-content" contenteditable="true"></div>
+      <div class="code-input-section">
+        <div class="code-input-bar">
+          <select id="code-lang" class="code-lang-select">
+            <option value="">纯文本</option>
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="css">CSS</option>
+            <option value="html">HTML</option>
+            <option value="typescript">TypeScript</option>
+            <option value="json">JSON</option>
+            <option value="bash">Bash</option>
+            <option value="sql">SQL</option>
+          </select>
+          <button class="btn-code-embed" onclick="embedCode()">嵌入代码</button>
+        </div>
+        <textarea id="code-textarea" class="code-textarea" placeholder="在此输入代码…" spellcheck="false" onpaste="return true"></textarea>
+      </div>
       <input type="file" id="img-file-input" accept="image/*" style="display:none" onchange="uploadAndInsert()">
     </div>
     <div class="form-group"><label>文章配图</label><div id="edit-images"></div><div style="display:flex;gap:0.5rem;margin-top:0.5rem"><button class="btn-primary btn-sm" onclick="addImage()">+ 添加图片 URL</button><button class="btn-primary btn-sm" onclick="document.getElementById('img-gallery-input').click()">上传配图</button><input type="file" id="img-gallery-input" accept="image/*" style="display:none" onchange="uploadGalleryImage()"></div><p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">建议使用 16:9 比例图片。多张图片将自动轮播展示。</p></div>
+    <div class="form-group"><label>文章标签（最多4个）</label><div id="edit-tags"></div><div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;align-items:center"><button class="btn-primary btn-sm" onclick="addEditTag()">+ 添加标签</button><span id="existing-tags" class="existing-tags"></span></div></div>
     <div class="form-actions"><button class="btn-primary" id="save-btn" onclick="savePost()">保存</button><button class="btn-ghost" onclick="hideEditor()">取消</button></div>
     <div id="edit-error" class="error hidden"></div>
     <div id="edit-success" class="success hidden"></div>
@@ -331,17 +383,22 @@ tryAutoLogin();
 
 // Posts
 async function loadPosts(){
-  const res=await fetch(API); const posts=await res.json(); const c=document.getElementById('post-list-container');
-  if(!posts.length){ c.innerHTML='<p style="color:var(--muted)">还没有文章。</p>'; return; }
-  c.innerHTML=posts.map(p=>`<div class="post-row"><div class="info"><div class="title" onclick="editPost(${p.id})">${esc(p.title)}</div><div class="meta">${p.date}</div></div><div class="actions"><button class="btn-ghost" onclick="editPost(${p.id})">编辑</button><button class="btn-ghost btn-danger" onclick="deletePost(${p.id})">删除</button></div></div>`).join('');
+  const res=await fetch(API); const posts=await res.json(); postsRaw=posts; const c=document.getElementById('post-list-container');
+  allTags=[...new Set(posts.flatMap(p=>p.tags||[]).filter(Boolean))];
+  allTags.sort(new Intl.Collator('zh-Hans',{sensitivity:'base'}).compare);
+  if(!posts.length){ c.innerHTML='<p style="color:var(--muted)">还没有文章。</p>'; document.getElementById('tag-filter-bar').classList.add('hidden'); return; }
+  c.innerHTML=posts.map(p=>`<div class="post-row"><div class="info"><div class="title" onclick="editPost(${p.id})">${esc(p.title)}</div><div class="meta">${p.date}${(p.tags||[]).length ? ' <span style="color:var(--accent);font-size:0.75rem">' + p.tags.map(t => esc(t)).join(' · ') + '</span>' : ''}</div></div><div class="actions"><button class="btn-ghost" onclick="editPost(${p.id})">编辑</button><button class="btn-ghost btn-danger" onclick="deletePost(${p.id})">删除</button></div></div>`).join('');
+  renderTagFilterPills();
 }
 
 function showEditor(){
   editingId=null; document.getElementById('editor-title').textContent='新建文章';
   document.getElementById('edit-title').value=''; document.getElementById('edit-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('edit-excerpt').value=''; document.getElementById('edit-content').innerHTML='';
-  editImages=[]; renderEditImages(); document.getElementById('edit-error').classList.add('hidden');
+  editImages=[]; renderEditImages(); editTags=[]; renderEditTags();
+  document.getElementById('edit-error').classList.add('hidden');
   document.getElementById('edit-success').classList.add('hidden'); document.getElementById('save-btn').textContent='保存';
+  document.getElementById('code-textarea').value='';
   document.getElementById('editor').classList.remove('hidden'); document.getElementById('edit-title').focus();
 }
 function hideEditor(){ document.getElementById('editor').classList.add('hidden'); }
@@ -351,8 +408,11 @@ async function editPost(id){
   if(!post) return; editingId=id; document.getElementById('editor-title').textContent='编辑文章';
   document.getElementById('edit-title').value=post.title; document.getElementById('edit-date').value=post.date;
   document.getElementById('edit-excerpt').value=post.excerpt||''; document.getElementById('edit-content').innerHTML=post.content;
-  editImages=post.images||[]; renderEditImages(); document.getElementById('edit-error').classList.add('hidden');
+  document.querySelectorAll('#edit-content pre').forEach(pre => pre.contentEditable = 'false');
+  editImages=post.images||[]; renderEditImages(); editTags=post.tags||[]; renderEditTags();
+  document.getElementById('edit-error').classList.add('hidden');
   document.getElementById('edit-success').classList.add('hidden'); document.getElementById('save-btn').textContent='更新';
+  document.getElementById('code-textarea').value='';
   document.getElementById('editor').classList.remove('hidden'); document.getElementById('edit-title').focus();
 }
 
@@ -362,7 +422,7 @@ async function savePost(){
   if(!title||!date||!content){ document.getElementById('edit-error').textContent='标题、日期和内容为必填项'; document.getElementById('edit-error').classList.remove('hidden'); return; }
   const url=editingId?`${API}/${editingId}`:API; const method=editingId?'PUT':'POST';
   try{
-    const res=await fetch(url,{method,credentials:'include',headers:getHeaders(),body:JSON.stringify({title,date,excerpt,content,images:editImages.filter(u=>u.trim())})});
+    const res=await fetch(url,{method,credentials:'include',headers:getHeaders(),body:JSON.stringify({title,date,excerpt,content,images:editImages.filter(u=>u.trim()),tags:editTags.filter(t=>t.trim())})});
     if(res.ok){ document.getElementById('edit-success').textContent=editingId?'文章已更新':'文章已创建'; document.getElementById('edit-success').classList.remove('hidden'); document.getElementById('edit-error').classList.add('hidden'); if(!editingId)hideEditor(); loadPosts(); }
     else{ const d=await res.json(); document.getElementById('edit-error').textContent=d.error||'保存失败'; document.getElementById('edit-error').classList.remove('hidden'); }
   }catch(e){console.error('Save post error:',e);document.getElementById('edit-error').textContent='网络错误';document.getElementById('edit-error').classList.remove('hidden');}
@@ -372,10 +432,10 @@ async function deletePost(id){ if(!confirm('确认删除这篇文章？'))return
 
 function switchTab(name){
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
-  const btns=document.querySelectorAll('.tabs button'); const map={posts:0,profile:1,settings:2,timeline:3,account:4,visits:5};
+  const btns=document.querySelectorAll('.tabs button'); const map={posts:0,profile:1,settings:2,timeline:3,account:4,visits:5,messages:6};
   if(map[name]!==undefined)btns[map[name]].classList.add('active');
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active')); document.getElementById('tab-'+name).classList.add('active');
-  if(name==='settings')loadSiteConfig(); if(name==='profile')loadProfileConfig(); if(name==='timeline')loadTimeline(); if(name==='account')loadAccountInfo(); if(name==='visits')loadVisits();
+  if(name==='settings')loadSiteConfig(); if(name==='profile')loadProfileConfig(); if(name==='timeline')loadTimeline(); if(name==='account')loadAccountInfo(); if(name==='visits')loadVisits(); if(name==='messages')loadAdminMessages();
 }
 
 // Profile
@@ -549,9 +609,77 @@ function insertImage(url){
   div.focus();
   document.execCommand('insertHTML',false,`<img src="${url}" alt="">`);
 }
+
+function embedCode(){
+  const sel=document.getElementById('code-lang');
+  const lang=sel.value;
+  const langName=sel.options[sel.selectedIndex].text;
+  const code=document.getElementById('code-textarea').value;
+  if(!code.trim())return;
+  const escaped=code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const langClass=lang?` class="language-${lang}"`:'';
+  const langAttr=lang?` data-lang="${langName}"`:'';
+  const html=`<pre${langAttr} contenteditable="false"><code${langClass}>${escaped}</code></pre>`;
+  document.getElementById('edit-content').focus();
+  document.execCommand('insertHTML',false,html);
+  // 将光标移到代码块之后，避免卡死在不可编辑区域内
+  const ed=document.getElementById('edit-content');
+  const pres=ed.querySelectorAll('pre[contenteditable="false"]');
+  if(pres.length){const r=document.createRange();r.setStartAfter(pres[pres.length-1]);r.collapse(true);const s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+  document.getElementById('code-textarea').value='';
+}
+
 let editImages=[];
+let editTags=[];
+let allTags=[];
+let selectedFilterTags=[];
+let postsRaw=[];
 function renderEditImages(){ document.getElementById('edit-images').innerHTML=editImages.map((u,i)=>`<div class="link-row"><input type="text" value="${u}" placeholder="图片 URL" onchange="editImages[${i}]=this.value"><button class="btn-danger btn-sm" onclick="editImages.splice(${i},1);renderEditImages()">删除</button></div>`).join(''); }
 function addImage(){ editImages.push(''); renderEditImages(); }
+function renderEditTags(){ const el=document.getElementById('edit-tags'); if(!el)return; el.innerHTML=editTags.map((t,i)=>`<div class="link-row"><input type="text" value="${t}" placeholder="标签" onchange="editTags[${i}]=this.value;renderExistingTags()"><button class="btn-danger btn-sm" onclick="editTags.splice(${i},1);renderEditTags()">删除</button></div>`).join(''); renderExistingTags(); }
+function addEditTag(){ if(editTags.length>=4)return; editTags.push(''); renderEditTags(); }
+function addExistingTag(tag){
+  if(editTags.length>=4)return;
+  if(editTags.includes(tag))return;
+  editTags.push(tag);
+  renderEditTags();
+}
+function renderExistingTags(){
+  const el=document.getElementById('existing-tags');
+  if(!el)return;
+  const available=allTags.filter(t=>!editTags.includes(t));
+  el.innerHTML=available.map(t=>`<span class="tag-chip" onclick="addExistingTag('${esc(t)}')">${esc(t)}</span>`).join('');
+}
+function renderTagFilterPills(){
+  const el=document.getElementById('tag-filter-pills');
+  const bar=document.getElementById('tag-filter-bar');
+  if(!el||!bar)return;
+  if(!allTags.length){ bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  el.innerHTML=allTags.map(t=>{
+    const sel=selectedFilterTags.includes(t);
+    return `<span class="tag-filter-pill${sel?' selected':''}" onclick="toggleFilterTag('${esc(t)}')">${esc(t)}</span>`;
+  }).join('');
+}
+function toggleFilterTag(tag){
+  const idx=selectedFilterTags.indexOf(tag);
+  if(idx>-1)selectedFilterTags.splice(idx,1);
+  else selectedFilterTags.push(tag);
+  renderTagFilterPills();
+}
+function applyTagFilter(){
+  const res=postsRaw.filter(p=>selectedFilterTags.every(t=>(p.tags||[]).includes(t)));
+  const c=document.getElementById('post-list-container');
+  if(!res.length){ c.innerHTML='<p style="color:var(--muted)">没有匹配的文章。</p>'; return; }
+  c.innerHTML=res.map(p=>`<div class="post-row"><div class="info"><div class="title" onclick="editPost(${p.id})">${esc(p.title)}</div><div class="meta">${p.date}${(p.tags||[]).length ? ' <span style="color:var(--accent);font-size:0.75rem">' + p.tags.map(t=>esc(t)).join(' · ') + '</span>' : ''}</div></div><div class="actions"><button class="btn-ghost" onclick="editPost(${p.id})">编辑</button><button class="btn-ghost btn-danger" onclick="deletePost(${p.id})">删除</button></div></div>`).join('');
+}
+function clearTagFilter(){
+  selectedFilterTags=[];
+  renderTagFilterPills();
+  const c=document.getElementById('post-list-container');
+  if(!postsRaw||!postsRaw.length){ c.innerHTML='<p style="color:var(--muted)">还没有文章。</p>'; return; }
+  c.innerHTML=postsRaw.map(p=>`<div class="post-row"><div class="info"><div class="title" onclick="editPost(${p.id})">${esc(p.title)}</div><div class="meta">${p.date}${(p.tags||[]).length ? ' <span style="color:var(--accent);font-size:0.75rem">' + p.tags.map(t=>esc(t)).join(' · ') + '</span>' : ''}</div></div><div class="actions"><button class="btn-ghost" onclick="editPost(${p.id})">编辑</button><button class="btn-ghost btn-danger" onclick="deletePost(${p.id})">删除</button></div></div>`).join('');
+}
 async function uploadAndInsert(){
   const file=document.getElementById('img-file-input').files[0];
   if(!file)return;
@@ -957,6 +1085,70 @@ function drawLineChart(ctx,data,W,H){
     ctx.fillStyle='#60a5fa';
     ctx.fill();
   }
+}
+
+// Messages admin
+async function loadAdminMessages() {
+  try {
+    const res = await fetch('/api/admin/messages', { credentials: 'include', headers: getHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const msgs = await res.json();
+    const list = document.getElementById('msg-list-admin');
+    const count = document.getElementById('msg-count');
+    if (!count || !list) return;
+    count.textContent = '共 ' + msgs.length + ' 条留言，' + msgs.filter(m => !m.approved).length + ' 条待审';
+    if (!msgs.length) {
+      list.innerHTML = '<p style="color:var(--muted)">暂无留言。</p>';
+      return;
+    }
+    list.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem"><thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);font-size:0.8rem;text-align:left">'
+      + '<th style="padding:0.5rem 0.75rem">昵称</th><th style="padding:0.5rem 0.75rem">来源</th><th style="padding:0.5rem 0.75rem">内容</th><th style="padding:0.5rem 0.75rem">时间</th><th style="padding:0.5rem 0.75rem">状态</th><th style="padding:0.5rem 0.75rem">操作</th>'
+      + '</tr></thead><tbody>'
+      + msgs.map(m => {
+        const t = new Date(m.time);
+        const ts = t.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const status = m.approved ? '<span style="color:var(--green)">已审核</span>' : '<span style="color:var(--muted)">待审核</span>';
+        const source = (m.context === 'article' && m.postId)
+          ? '<span style="color:var(--accent)">文章 #' + m.postId + '</span>'
+          : '<span style="color:var(--muted)">个人信息</span>';
+        const actions = m.approved
+          ? '<button class="btn-ghost" style="color:#f59e0b" onclick="approveMessage(' + m.id + ',false)">驳回</button>'
+          : '<button class="btn-ghost" style="color:var(--green)" onclick="approveMessage(' + m.id + ',true)">通过</button>';
+        return '<tr style="border-bottom:1px solid var(--border)">'
+          + '<td style="padding:0.5rem 0.75rem;color:var(--accent)">' + esc(m.nickname || '匿名') + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;font-size:0.8rem;white-space:nowrap">' + source + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(m.content) + '">' + esc(m.content) + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;color:var(--muted);font-size:0.8rem;white-space:nowrap">' + ts + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;font-size:0.8rem">' + status + '</td>'
+          + '<td style="padding:0.5rem 0.75rem">'
+          + actions
+          + ' <button class="btn-ghost btn-danger" style="font-size:0.8rem" onclick="deleteMessage(' + m.id + ')">删除</button>'
+          + '</td></tr>';
+      }).join('')
+      + '</tbody></table>';
+  } catch (e) {
+    console.error('Load messages error:', e);
+  }
+}
+
+async function approveMessage(id, approved) {
+  try {
+    await fetch('/api/admin/messages/' + id, {
+      method: 'PUT', credentials: 'include', headers: getHeaders(),
+      body: JSON.stringify({ approved })
+    });
+    loadAdminMessages();
+  } catch (e) { console.error(e); }
+}
+
+async function deleteMessage(id) {
+  if (!confirm('确认删除这条留言？')) return;
+  try {
+    await fetch('/api/admin/messages/' + id, {
+      method: 'DELETE', credentials: 'include', headers: getHeaders()
+    });
+    loadAdminMessages();
+  } catch (e) { console.error(e); }
 }
 
 window.addEventListener('resize',()=>{
