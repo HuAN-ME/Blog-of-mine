@@ -17,12 +17,11 @@ const jwt = require('jsonwebtoken');
 // ── HTML sanitization whitelists ──
 
 const POST_SANITIZE = {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'span', 'u', 's', 'pre', 'code']),
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'span', 'u', 's']),
   allowedAttributes: {
     a: ['href', 'target', 'rel'],
     img: ['src', 'alt', 'width', 'height', 'loading'],
-    code: ['class'],
-    pre: ['class', 'data-lang']
+    span: ['class', 'data-cb-idx']
   },
   allowedSchemes: ['http', 'https', 'mailto'],
   transformTags: {
@@ -1075,6 +1074,45 @@ app.post('/api/upload-bg', checkAdmin, uploadBg.single('file'), (req, res) => {
   if (!checkMagic(buf, ext)) { fs.unlinkSync(filePath); return res.status(400).json({ error: '文件内容与扩展名不符' }); }
   const url = '/images/bg/' + req.file.filename;
   res.json({ url });
+});
+
+// ── Cleanup orphaned images ──
+
+app.post('/api/cleanup-images', checkAdmin, (req, res) => {
+  const postsDir = path.join(__dirname, 'images', 'posts');
+  if (!fs.existsSync(postsDir)) return res.json({ deleted: [], count: 0, freedBytes: 0 });
+
+  // Collect all referenced image filenames from posts and config
+  const posts = readPosts();
+  const config = readConfig();
+  const referenced = new Set();
+
+  posts.forEach(p => {
+    const m = (p.content || '').match(/\/images\/posts\/([^"'\s>]+)/g);
+    if (m) m.forEach(u => referenced.add(u.replace('/images/posts/', '')));
+    (p.images || []).forEach(url => {
+      const fn = url.split('/').pop();
+      if (fn) referenced.add(fn);
+    });
+  });
+  const bgFn = ((config.background && config.background.url) || '').split('/').pop();
+  if (bgFn) referenced.add(bgFn);
+  const avFn = ((config.profile && config.profile.avatar) || '').split('/').pop();
+  if (avFn) referenced.add(avFn);
+
+  // Scan disk and delete orphans
+  const diskFiles = fs.readdirSync(postsDir).filter(f => f !== '.gitkeep');
+  const deleted = [];
+  let freedBytes = 0;
+  diskFiles.forEach(f => {
+    if (!referenced.has(f)) {
+      const fp = path.join(postsDir, f);
+      try { freedBytes += fs.statSync(fp).size; } catch (_) {}
+      try { fs.unlinkSync(fp); } catch (_) {}
+      deleted.push(f);
+    }
+  });
+  res.json({ deleted, count: deleted.length, freedBytes });
 });
 
 // ── Start ──

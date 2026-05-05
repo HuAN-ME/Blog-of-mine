@@ -3,6 +3,12 @@
   "title": "Test",
   "date": "2026-05-03",
   "excerpt": "快、安全、省心。",
-  "content": "<img src=\"/images/posts/1777821580776_5or4er.png\" alt=\"\"><div>Hello哇！</div><div><img src=\"/images/posts/1777821628487_xwbwaw.png\" alt=\"\"></div><div>test一手</div>",
-  "images": []
+  "content": "<img src=\"/images/posts/1777821580776_5or4er.png\" alt=\"\" /><div>Hello哇！</div><div><img src=\"/images/posts/1777821628487_xwbwaw.png\" alt=\"\" /></div><div>test一手</div>",
+  "images": [],
+  "tags": [
+    "Python",
+    "Programing Design",
+    "面向对象",
+    "杂谈"
+  ]
 }

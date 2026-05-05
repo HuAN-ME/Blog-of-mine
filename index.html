@@ -203,44 +203,30 @@
   .login-btn { padding:0.5rem 1.1rem; border-radius:8px; background:rgba(255,255,255,0.08); color:var(--muted); cursor:pointer; font-size:0.95rem; font-weight:600; transition:all 0.2s; border:none; }
   .login-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
 
-  /* Tag Cloud */
+  /* Tag Cloud — 单行纯展示 */
   .tag-cloud {
-    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden;
     margin-bottom: 1.5rem; margin-top: 1.5rem; padding: 0.75rem 1rem;
     background: var(--glass); backdrop-filter: blur(10px);
     border-radius: 12px;
-    max-height: 130px; overflow: hidden; position: relative;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
-  .tag-cloud.has-overflow { padding-bottom: 2rem; }
-  .tag-cloud.has-overflow::after {
-    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
-    height: 2.5rem;
-    background: linear-gradient(transparent, rgba(13,13,13,0.9));
-    pointer-events: none; border-radius: 0 0 12px 12px;
-  }
-  .tag-cloud-label { color: var(--muted); font-size: 0.85rem; flex-shrink: 0; }
+  .tag-cloud::-webkit-scrollbar { display: none; }
   .tag-cloud-tag {
-    display: inline-block; padding: 0.2em 0.65em; border-radius: 999px; line-height: 1;
+    display: inline-block; padding: 0.3em 0.75em; margin-right: 0.5rem; border-radius: 999px; line-height: 1.3;
     background: rgba(255,255,255,0.08); border: 1px solid var(--border);
     color: var(--muted); cursor: pointer; user-select: none;
-    transition: all 0.2s; margin: 0.2rem 0.35rem;
+    transition: all 0.2s; white-space: nowrap;
   }
   .tag-cloud-tag:hover { border-color: var(--accent); color: #fff; }
-  .tag-cloud-tag.active, .tag-cloud-tag.selected {
-    background: rgba(96,165,250,0.2); border-color: var(--accent);
-    color: var(--accent); font-weight: 600;
-  }
-  .tag-cloud-confirm {
-    background: rgba(96,165,250,0.18); border: 1px solid rgba(96,165,250,0.3);
-    color: var(--accent); font-size: 0.75rem; cursor: pointer;
-    padding: 0.15rem 0.6rem; border-radius: 6px; flex-shrink: 0; transition: all 0.15s;
-  }
-  .tag-cloud-confirm:hover { background: rgba(96,165,250,0.3); }
-  .tag-cloud-clear {
+  .tag-cloud-tag.selected { background: rgba(96,165,250,0.18); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .tag-cloud-all {
     background: none; border: none; color: var(--accent); font-size: 0.8rem;
-    cursor: pointer; margin-left: auto; flex-shrink: 0;
+    cursor: pointer; flex-shrink: 0; white-space: nowrap; margin-left: auto;
   }
-  .tag-cloud-clear:hover { color: #fff; }
+  .tag-cloud-all:hover { color: #fff; }
 
   /* Tag All Modal */
   .tag-all-layout { display: flex; gap: 0.75rem; max-height: 55vh; }
@@ -272,7 +258,7 @@
   .tag-index-letter:hover { background: rgba(96,165,250,0.2); color: #fff; }
 
   /* Card Tags */
-  .card-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+  .card-tags { display: flex; flex-wrap: wrap; column-gap: 4px; row-gap: 6px; margin-top: 4px; }
   .card-tag { font-size: 0.7rem; padding: 0.1em 0.45em; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid var(--border); color: var(--muted); line-height: 1; }
 
   /* Timeline */
@@ -293,9 +279,64 @@
   .tl-card .tl-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
   .tl-card .tl-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
   @media (max-width: 640px) {
+    /* Timeline (existing) */
     .timeline-line { left: 1rem; }
     .tl-item:nth-child(odd), .tl-item:nth-child(even) { flex-direction: row; padding: 0 0 0 2.5rem; }
     .tl-dot { left: 1rem; }
+
+    /* Container */
+    .container { padding: 1rem; }
+
+    /* Profile */
+    .profile-card { padding: 1rem; gap: 0.75rem; }
+    .profile-card .avatar { width: 48px; height: 48px; }
+    .profile-card .name { font-size: 1.1rem; }
+    .profile-card .bio { font-size: 0.8rem; }
+    .profile-card .tag { font-size: 0.7rem; }
+
+    /* Header */
+    .blog-header h1 { font-size: 1.5rem; }
+    .blog-header p { font-size: 0.85rem; }
+
+    /* Post Grid — single column */
+    .post-grid { columns: 1; column-gap: 0; }
+
+    /* Modal */
+    .modal-overlay { padding: 1rem; align-items: flex-start; }
+    .modal-box { padding: 1.25rem; max-width: 100%; max-height: 90vh; border-radius: 12px; }
+    .modal-box h2 { font-size: 1.25rem; }
+    .modal-box .body { font-size: 0.9rem; }
+    .modal-box .body pre { font-size: 0.78rem; padding: 1.75rem 0.75rem 0.75rem 0.75rem; }
+    .modal-box .body pre[data-lang]::before { font-size: 0.62rem; height: 1.4rem; padding: 0 0.75rem; }
+
+    /* Comments */
+    .msg-form .msg-meta { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+    .msg-form .btn-submit { align-self: stretch; }
+
+    /* Tag cloud */
+    .tag-cloud { padding: 0.5rem 0.75rem; margin-bottom: 1rem; margin-top: 1rem; gap: 0.35rem; }
+    .tag-cloud-tag { font-size: 0.75rem; padding: 0.2em 0.6em; margin-right: 0.35rem; }
+
+    /* Tag all modal */
+    .tag-all-layout { flex-direction: column; max-height: 70vh; }
+    .tag-all-groups { max-height: none; }
+    .tag-index-bar { flex-direction: row; flex-wrap: wrap; max-height: none; overflow-y: visible; gap: 2px; padding-left: 0; }
+    .tag-index-letter { padding: 0.2em 0.4em; font-size: 0.75rem; }
+
+    /* Footer */
+    .site-footer { margin-top: 2rem; padding-top: 1rem; font-size: 0.75rem; }
+
+    /* Login bar */
+    .login-bar { margin-bottom: 0.5rem; }
+    .blog-clock { font-size: 0.78rem; padding: 0.35rem 0.65rem; }
+    .login-btn { font-size: 0.78rem; padding: 0.35rem 0.65rem; }
+
+    /* Section title */
+    .section-title { font-size: 1.25rem; }
+
+    /* Card info */
+    .card-info { padding: 0.6rem 0.75rem; }
+    .card-info .title { font-size: 0.85rem; }
   }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
@@ -326,10 +367,8 @@
   </div>
 
   <div id="tag-cloud" class="tag-cloud hidden">
-    <span class="tag-cloud-label">筛选：</span>
     <span id="tag-cloud-tags"></span>
-    <button class="tag-cloud-confirm" onclick="applyTagCloudFilter()">确认</button>
-    <button class="tag-cloud-clear" onclick="clearTagCloudFilter()">全部</button>
+    <button class="tag-cloud-all" onclick="showAllTags()">筛选标签</button>
   </div>
 
   <div id="post-grid" class="post-grid"></div>
@@ -381,8 +420,8 @@
 let posts = [];
 let carousels = {};
 let cfg = null;
-let activeTag = null;
-let selectedCloudTags = [];
+let _allModalSelected = [];
+let _modalWorkingSet = [];
 
 async function loadConfig() {
   try {
@@ -546,7 +585,8 @@ function startAuto(pid) {
 function showPost(id) {
   const post = posts.find(p => p.id === id);
   if (!post) return;
-  document.getElementById('modal-body').innerHTML = `<h2>${esc(post.title)}</h2><div class="meta">${esc(post.date)}</div><div class="body">${post.content}</div>
+  let contentHtml = post.content;
+  document.getElementById('modal-body').innerHTML = `<h2>${esc(post.title)}</h2><div class="meta">${esc(post.date)}</div><div class="body">${contentHtml}</div>
     <div class="post-comments" id="post-comments">
       <div class="msg-list" id="post-msg-list"><p class="msg-empty">加载留言中...</p></div>
       <div class="msg-form">
@@ -692,6 +732,8 @@ async function submitMessage() {
 }
 
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 
 // Timeline
 async function loadTimeline(){
@@ -736,50 +778,43 @@ function initScrollReveal() {
 }
 
 // Tag Cloud
+let _activeCloudTag = null;
+
 function buildTagCloud() {
   const cloud = document.getElementById('tag-cloud');
   const container = document.getElementById('tag-cloud-tags');
   if (!cloud || !container) return;
   const freq = {};
   posts.forEach(p => (p.tags||[]).forEach(t => { freq[t] = (freq[t]||0) + 1; }));
-  const collator = new Intl.Collator('zh-Hans', { sensitivity: 'base' });
-  const entries = Object.entries(freq).sort((a,b) => collator.compare(a[0], b[0]));
+  const entries = Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0, 10);
   if (!entries.length) { cloud.classList.add('hidden'); return; }
   cloud.classList.remove('hidden');
-  container.innerHTML = entries.map(([tag]) => {
-    const sel = selectedCloudTags.includes(tag);
-    return `<span class="tag-cloud-tag${sel ? ' selected' : ''}" onclick="toggleCloudTag('${esc(tag)}')">${esc(tag)}</span>`;
-  }).join('');
-  requestAnimationFrame(() => {
-    const overflows = cloud.scrollHeight > cloud.clientHeight + 5;
-    cloud.classList.toggle('has-overflow', overflows);
-  });
+  container.innerHTML = entries.map(([tag]) =>
+    `<span class="tag-cloud-tag${_activeCloudTag === tag ? ' selected' : ''}" onclick="filterByCloudTag('${esc(tag)}')">${esc(tag)}</span>`
+  ).join('');
 }
 
-function toggleCloudTag(tag) {
-  const idx = selectedCloudTags.indexOf(tag);
-  if (idx > -1) selectedCloudTags.splice(idx, 1);
-  else selectedCloudTags.push(tag);
-  buildTagCloud();
-}
-
-function applyTagCloudFilter() {
-  if (!selectedCloudTags.length) { clearTagCloudFilter(); return; }
-  activeTag = selectedCloudTags[0]; // 兼容性保留
-  const filtered = posts.filter(p => selectedCloudTags.every(t => (p.tags||[]).includes(t)));
-  renderGrid(filtered);
-  buildTagCloud();
-}
-
-function clearTagCloudFilter() {
-  selectedCloudTags = [];
-  activeTag = null;
-  renderGrid(posts);
+function filterByCloudTag(tag) {
+  if (_activeCloudTag === tag) {
+    _activeCloudTag = null;
+    _allModalSelected = [];
+    renderGrid(posts);
+  } else {
+    _activeCloudTag = tag;
+    _allModalSelected = [tag];
+    const filtered = posts.filter(p => (p.tags||[]).includes(tag));
+    renderGrid(filtered);
+  }
   buildTagCloud();
 }
 
 // Tag-All Modal
 function showAllTags() {
+  _modalWorkingSet = [..._allModalSelected];
+  renderTagAllModal();
+}
+
+function renderTagAllModal() {
   const freq = {};
   posts.forEach(p => (p.tags||[]).forEach(t => { freq[t] = (freq[t]||0) + 1; }));
   const allTags = [...new Set(Object.keys(freq))];
@@ -804,8 +839,8 @@ function showAllTags() {
     return `<div class="tag-group" id="tag-group-${letter}">
       <div class="tag-group-letter">${letter}</div>
       <div class="tag-group-tags">${tags.map(t => {
-        const cls = selectedCloudTags.includes(t) ? 'tag-all-tag active' : 'tag-all-tag';
-        return `<span class="${cls}" onclick="toggleCloudTag('${esc(t)}');showAllTags()">${esc(t)}</span>`;
+        const cls = _modalWorkingSet.includes(t) ? 'tag-all-tag active' : 'tag-all-tag';
+        return `<span class="${cls}" onclick="toggleAllModalTag('${esc(t)}')">${esc(t)}</span>`;
       }).join('')}</div>
     </div>`;
   }).join('');
@@ -823,15 +858,25 @@ function scrollToTagGroup(letter) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function toggleAllModalTag(tag) {
+  const idx = _modalWorkingSet.indexOf(tag);
+  if (idx > -1) _modalWorkingSet.splice(idx, 1);
+  else _modalWorkingSet.push(tag);
+  renderTagAllModal();
+}
+
 function applyTagAllFilter() {
+  _allModalSelected = [..._modalWorkingSet];
   closeTagAllModal();
-  if (!selectedCloudTags.length) { clearTagCloudFilter(); return; }
-  activeTag = selectedCloudTags[0];
-  const filtered = posts.filter(p => selectedCloudTags.every(t => (p.tags||[]).includes(t)));
+  if (!_allModalSelected.length) {
+    renderGrid(posts);
+    buildTagCloud();
+    return;
+  }
+  const filtered = posts.filter(p => _allModalSelected.every(t => (p.tags||[]).includes(t)));
   renderGrid(filtered);
   buildTagCloud();
 }
-
 function closeTagAllModal(e) {
   if (e && e.target !== document.getElementById('tag-all-modal')) return;
   document.getElementById('tag-all-modal').classList.add('hidden');

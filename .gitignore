@@ -5,3 +5,6 @@ images/posts/*
 !images/posts/.gitkeep
 _cursor-local-assistant/
 config.json
+query
+server_out.txt
+*-demo.html

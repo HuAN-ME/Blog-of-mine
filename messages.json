@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1777885708066,
+    "nickname": "visitor",
+    "content": "你好谢谢小笼包再见",
+    "time": "2026-05-04T09:08:28.066Z",
+    "approved": true
+  },
+  {
+    "id": 1777887353833,
+    "nickname": "Guest",
+    "content": "Nice blog!",
+    "time": "2026-05-04T09:35:53.833Z",
+    "approved": true,
+    "context": "profile",
+    "postId": null
+  },
+  {
+    "id": 1777887540870,
+    "nickname": "Alex",
+    "content": "woc原！",
+    "time": "2026-05-04T09:39:00.870Z",
+    "approved": true,
+    "context": "article",
+    "postId": 1
+  }
+]
