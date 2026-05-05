@@ -90,7 +90,7 @@ npm start
 
 ### 生产环境
 
-用 PM2 保持常驻，Nginx 反代 + SSL。详见之前给出的部署手册。
+用 PM2 保持常驻，Nginx 反代 + SSL。
 
 ## 管理后台
 
